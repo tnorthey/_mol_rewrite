@@ -11,6 +11,8 @@ $ grep "def " ../modules/mol.py
   def read_xyz_traj(self, fname, ntsteps):
   def write_xyz_traj(self, fname, atoms, xyz_traj):
   def distances_array(self, xyz):
+
+Not tested yet:
   def rmsd_atoms(self, xyz, xyz_, indices):
   def rmsd_kabsch(self, xyz, xyz_, indices):
   def mapd_function(self, xyz, xyz_, indices, bond_print):
@@ -65,7 +67,7 @@ def test_write_xyz():
     with open(fname) as out:
         assert out.readline() == "3\n", "1st line of out.xyz != 3"
         assert out.readline() == "test\n", "2nd line of out.xyz != 'test'"
-    os.remove(fname)
+    os.remove(fname)  # delete the file
 
 def test_distances_array():
     dist_array = m.distances_array(xyz)

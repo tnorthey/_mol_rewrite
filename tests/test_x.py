@@ -7,8 +7,9 @@ $ grep "def " modules/x.py
   def read_iam_coeffs(self):
   def atomic_factor(self, atom_number, qvector):
   def compton_spline(self, atomic_numbers, qvector):
-  def iam_calc_xray(
-  def iam_calc_electron(
+  def iam_calc(
+
+Not tested yet:
   def iam_calc_2d(self, atomic_numbers, xyz, qvector):
   def jq_atomic_factors_calc(self, atomic_numbers, qvector):
   def compton_spline_calc(self, atomic_numbers, qvector):
@@ -66,10 +67,16 @@ compton_array = x.compton_spline(atomic_numbers, qvector)  # compton factors
 inelastic = True
 
 def test_iam_calc():
+    '''x-ray scattering mode'''
     electron_mode = False
     iam, atomic, molecular, compton = x.iam_calc(atomic_numbers, xyz, qvector, electron_mode, inelastic, compton_array)
     # test if H2O I(q=0) = Nel**2 = 10**2  (within rounding)
     assert round(iam[0], 0) == 100.0, "H2O I_total(q = 0) != 100"
     # test if H2O I(q=24)_inelastic = Nel = 10  (within rounding)
     assert round(compton[-1], 0) == 10.0, "H2O inelastic scattering term (q = 24) != 10"
+    '''electron scattering mode'''
+    electron_mode = True
+    iam, atomic, molecular, compton = x.iam_calc(atomic_numbers, xyz, qvector, electron_mode, inelastic, compton_array)
+    # test if H2O I(q=0) = 0 (within rounding)
+    assert round(iam[0], 0) == 0.0, "H2O I_total(q = 0) != 0"
 
