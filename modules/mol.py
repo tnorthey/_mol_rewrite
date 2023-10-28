@@ -19,7 +19,7 @@ class Xyz:
         with open("data/atomic_masses.txt") as am_file:
             for line in am_file:
                 if line.split()[0] == element:
-                    return line.split()[1]
+                    return float(line.split()[1])
 
     # read/write xyz files
 
