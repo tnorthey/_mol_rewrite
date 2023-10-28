@@ -102,8 +102,8 @@ class Xray:
             compton_array[i, :] = interpolate.splev(qvector, tck, der=0)
         return compton_array
 
-    def iam_calc_xray(
-        self, atomic_numbers, xyz, qvector, inelastic=False, compton_array=np.zeros(0)
+    def iam_calc(
+        self, atomic_numbers, xyz, qvector, electron_mode=False, inelastic=False, compton_array=np.zeros(0)
     ):
         """calculate IAM molecular scattering curve for atoms, xyz, qvector"""
         natom = len(atomic_numbers)
@@ -112,56 +112,32 @@ class Xray:
         molecular = np.zeros(qlen)  # total molecular factor
         compton = np.zeros(qlen)  # total compton factor
         atomic_factor_array = np.zeros((natom, qlen))  # array of atomic factors
+        if electron_mode:  # electron mode
+            zfactor = atomic_numbers
+            e_mode_int = 1
+        else:  # assume x-ray mode
+            zfactor = np.multiply(0.0, atomic_numbers)
+            e_mode_int = -1
         for i in range(natom):
             tmp = self.atomic_factor(atomic_numbers[i], qvector)
             atomic_factor_array[i, :] = tmp
-            atomic += tmp ** 2
-            if inelastic:
-                compton += compton_array[i, :]
-        for i in range(natom):
-            for j in range(i + 1, natom):  # j > i
-                molecular += np.multiply(
-                    atomic_factor_array[i, :], atomic_factor_array[j, :]
-                ) * np.sinc(qvector * np.linalg.norm(xyz[i, :] - xyz[j, :]) / np.pi)
-                #### alternate code: ####
-                # rij = np.sqrt( np.sum( ( xyz[i, :] - xyz[j, :] )**2 ) )
-                # molecular += np.multiply(
-                #    atomic_factor_array[i, :], atomic_factor_array[j, :]
-                # ) * np.sinc(qvector * rij / np.pi)
-        iam = atomic + 2 * molecular
-        if inelastic:
-            iam += compton
-        return iam, atomic, molecular, compton
-
-    def iam_calc_electron(
-        self, atomic_numbers, xyz, qvector, inelastic=False, compton_array=np.zeros(0)
-    ):
-        """calculate IAM molecular scattering curve for atoms, xyz, qvector"""
-        natom = len(atomic_numbers)
-        qlen = len(qvector)
-        atomic = np.zeros(qlen)  # total atomic factor
-        molecular = np.zeros(qlen)  # total molecular factor
-        compton = np.zeros(qlen)  # total compton factor
-        atomic_factor_array = np.zeros((natom, qlen))  # array of atomic factors
-        for i in range(natom):
-            tmp = self.atomic_factor(atomic_numbers[i], qvector)
-            atomic_factor_array[i, :] = tmp
-            atomic += (atomic_numbers[i] - tmp) ** 2
+            atomic += (zfactor[i] - tmp) ** 2
             if inelastic:
                 compton += compton_array[i, :]
         for i in range(natom):
             for j in range(i + 1, natom):  # j > i
                 molecular += (
                     np.multiply(
-                        (atomic_numbers[i] - atomic_factor_array[i, :]),
-                        (atomic_numbers[j] - atomic_factor_array[j, :]),
+                        (zfactor[i] - e_mode_int * atomic_factor_array[i, :]),
+                        (zfactor[j] - e_mode_int * atomic_factor_array[j, :]),
                     )
-                    * np.sinc(qvector * np.linalg.norm(xyz[i, :] - xyz[j, :]) / np.pi)
+                * np.sinc(qvector * np.linalg.norm(xyz[i, :] - xyz[j, :]) / np.pi)
                 )
         iam = atomic + 2 * molecular
         if inelastic:
             iam += compton
-        return iam
+        return iam, atomic, molecular, compton
+
 
     def iam_calc_2d(self, atomic_numbers, xyz, qvector):
         """

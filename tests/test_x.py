@@ -65,17 +65,11 @@ def test_atomic_factor():
 compton_array = x.compton_spline(atomic_numbers, qvector)  # compton factors
 inelastic = True
 
-def test_iam_calc_xray():
-    iam, atomic, molecular, compton = x.iam_calc_xray(atomic_numbers, xyz, qvector, inelastic, compton_array)
+def test_iam_calc():
+    electron_mode = False
+    iam, atomic, molecular, compton = x.iam_calc(atomic_numbers, xyz, qvector, electron_mode, inelastic, compton_array)
     # test if H2O I(q=0) = Nel**2 = 10**2  (within rounding)
     assert round(iam[0], 0) == 100.0, "H2O I_total(q = 0) != 100"
     # test if H2O I(q=24)_inelastic = Nel = 10  (within rounding)
     assert round(compton[-1], 0) == 10.0, "H2O inelastic scattering term (q = 24) != 10"
-
-def test_iam_calc_electron():
-    iam, atomic, molecular, compton = x.iam_calc_electron(atomic_numbers, xyz, qvector, inelastic, compton_array)
-    # test if H2O I(q=0) = 0  (within rounding)
-    assert round(iam[0], 0) == 0.0, "H2O I_total(q = 0) != 0"
-    # test if H2O I(q=24)_inelastic = Nel = 10  (within rounding)
-    #assert round(compton[-1], 0) == 10.0, "H2O inelastic scattering term (q = 24) != 10"
 
