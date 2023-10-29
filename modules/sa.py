@@ -135,8 +135,7 @@ class Annealing:
         target_function,
         qvector,
         step_size_array,
-        ho_indices1,
-        ho_indices2,
+        ho_indices,
         starting_temp=0.2,
         nsteps=10000,
         inelastic=True,
@@ -165,18 +164,15 @@ class Annealing:
         ##=#=#=# END DEFINITIONS #=#=#=#
 
         ##=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=##
-
-        nho_indices = len(ho_indices1)  # number of HO indices
-
+        nho_indices = len(ho_indices)  # number of HO indices
         r0_arr = np.zeros(nho_indices)  # array of starting xyz bond-lengths
         for i in range(nho_indices):
             r0_arr[i] = np.linalg.norm(
-                starting_xyz[ho_indices1[i], :] - starting_xyz[ho_indices2[i], :]
+                starting_xyz[ho_indices[0][i], :] - starting_xyz[ho_indices[1][i], :]
             )
 
         total_harmonic_contrib = 0
         total_xray_contrib = 0
-
         ##=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=##
 
         ##=#=#=# INITIATE LOOP VARIABLES #=#=#=#=#
@@ -229,7 +225,6 @@ class Annealing:
                 predicted_function_ = iam_
 
             ### x-ray part of chi2
-            # xray_contrib = np.sum((predicted_function_ - target_function) ** 2) / qlen
             xray_contrib = (
                 #np.sum((predicted_function_ - target_function) ** 2 / target_function) / qlen
                 np.sum((predicted_function_ - target_function) ** 2) / qlen
@@ -237,7 +232,7 @@ class Annealing:
             ### harmonic oscillator part of chi2
             harmonic_contrib = 0
             for iho in range(nho_indices):
-                r = LA.norm(xyz_[ho_indices1[iho], :] - xyz_[ho_indices2[iho], :])
+                r = LA.norm(xyz_[ho_indices[0][iho], :] - xyz_[ho_indices[1][iho], :])
                 harmonic_contrib += af * (r - r0_arr[iho]) ** 2
 
             ### combine x-ray and harmonic contributions
@@ -266,7 +261,6 @@ class Annealing:
         print("xray contrib ratio: %f" % xray_ratio)
         print("harmonic contrib ratio: %f" % harmonic_ratio)
         # end function
-        print(chi2_best)
-        print(predicted_best)
         return chi2_best, predicted_best, xyz_best, chi2_array, chi2_xray_best
 
+    

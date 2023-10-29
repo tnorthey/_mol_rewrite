@@ -1,25 +1,14 @@
-"""
-Test sa.py module
-
-The following functions are tested:
-$ grep "def " modules/sa.py 
-def __init__(self):
-def read_nm_displacements(self, fname, natoms):
-def uniform_factors(self, nmodes, displacement_factors):
-def displacements_from_wavenumbers(self, wavenumbers, step_size, exponential=False):
-def simulate_trajectory(
-def atomic_pre_molecular(self, atomic_numbers, qvector, aa, bb, cc, electron_mode=False):
-def simulated_annealing_modes_ho(
-    def get_angle_3d(a, b, c):
-"""
-
 import numpy as np
-import os
-
-# my own modules
+import sys
+import scipy.io
+from timeit import default_timer
+from numpy.random import random_sample as random
+# my modules
 import modules.mol as mol
 import modules.x as xray
 import modules.sa as sa
+
+start = default_timer()
 
 # create class objects
 m = mol.Xyz()
@@ -93,7 +82,7 @@ step_size_array = 0.01 * np.ones(nmodes)
 ho_indices = [[0, 1, 2, 3, 4], [1, 2, 3, 4, 5]]  # chd specific!
 
 starting_temp = 0.2
-nsteps = 100
+nsteps = 8000
 af = 0.01
 pcd_mode = True
 electron_mode = False  # x-rays
@@ -102,34 +91,48 @@ electron_mode = False  # x-rays
 #################################
 ### End Initialise some stuff ###
 #################################
+(
+    chi2_best,
+    predicted_best,
+    xyz_best,
+    chi2_array,
+    chi2_xray_best,
+) = sa.simulated_annealing_modes_ho(
+    atomlist,
+    starting_xyz,
+    reference_xyz,
+    displacements,
+    mode_indices,
+    target_function,
+    qvector,
+    step_size_array,
+    ho_indices,
+    starting_temp,
+    nsteps,
+    inelastic,
+    af,
+    pcd_mode,
+    q_mode,
+    electron_mode,
+)
+
+run_id_ = 0  # define a number to label the start of the output filenames
+run_id = str(run_id_).zfill(2)  # pad with zeros
+
+print("writing to xyz... (chi2: %10.8f)" % chi2_xray_best)
+chi2_best_str = ("%10.8f" % chi2_xray_best).zfill(12)
+m.write_xyz(
+    "%s_%s.xyz" % (run_id, chi2_best_str),
+    "run_id: %s" % run_id,
+    atomlist,
+    xyz_best,
+)
+np.savetxt(
+    "%s_%s.dat" % (run_id, chi2_best_str),
+    np.column_stack((qvector, predicted_best)),
+)
 
 
-def test_simulated_annealing_modes_ho():
-    """ test the simulated annealing function ... """
-    (
-        chi2_best,
-        predicted_best,
-        xyz_best,
-        chi2_array,
-        chi2_xray_best,
-    ) = sa.simulated_annealing_modes_ho(
-        atomlist,
-        starting_xyz,
-        reference_xyz,
-        displacements,
-        mode_indices,
-        target_function,
-        qvector,
-        step_size_array,
-        ho_indices,
-        starting_temp,
-        nsteps,
-        inelastic,
-        af,
-        pcd_mode,
-        q_mode,
-        electron_mode,
-    )
-    assert xyz_best.shape == starting_xyz.shape, "xyz_best.shape != starting_xyz.shape"
-    # assert other things to check..
+print("%10.8f" % chi2_best)
 
+print("Total time: %3.2f s" % float(default_timer() - start))
