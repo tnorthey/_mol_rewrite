@@ -1,5 +1,15 @@
 import numpy as np
+from numpy.random import random_sample as random
+from numpy import linalg as LA
+# my modules
+import modules.mol as mol
+import modules.x as xray
 
+# create class objects
+m = mol.Xyz()
+x = xray.Xray()
+
+#############################
 class Annealing:
     """Gradient descent functions"""
 
@@ -127,14 +137,10 @@ class Annealing:
         step_size_array,
         ho_indices1,
         ho_indices2,
-        aho_indices1,
-        aho_indices2,
-        aho_indices3,
         starting_temp=0.2,
         nsteps=10000,
         inelastic=True,
         af=1,  # HO factor
-        af2=1,  # angular HO factor
         pcd_mode=False,
         q_mode=False,
         electron_mode=False,
@@ -144,14 +150,9 @@ class Annealing:
         ## start.xyz, reference.xyz ##
         atomic_numbers = [m.periodic_table(symbol) for symbol in atomlist]
         compton_array = x.compton_spline(atomic_numbers, qvector)
-        if electron_mode:
-           reference_iam = x.iam_calc_electron(
-               atomic_numbers, reference_xyz, qvector, inelastic, compton_array
-           )
-        else:
-           reference_iam = x.iam_calc_compton(
-               atomic_numbers, reference_xyz, qvector, inelastic, compton_array
-           )
+        reference_iam, _, _, _ = x.iam_calc(
+            atomic_numbers, reference_xyz, qvector, electron_mode, inelastic, compton_array
+        )
         natoms = starting_xyz.shape[0]  # number of atoms
         nmodes = displacements.shape[0]  # number of displacement vectors
         modes = list(range(nmodes))  # all modes
@@ -173,27 +174,7 @@ class Annealing:
                 starting_xyz[ho_indices1[i], :] - starting_xyz[ho_indices2[i], :]
             )
 
-        def get_angle_3d(a, b, c):
-            # a, b, c are numpy arrays of size (1, 3) 
-            ba = a - b
-            bc = c - b
-            cosine_angle = np.dot(ba, bc) / (np.linalg.norm(ba) * np.linalg.norm(bc))
-            angle = np.arccos(cosine_angle)
-            # angle_degrees = np.degrees(angle)
-            return angle
-
-        nhoa_indices = len(aho_indices1)  # number of angular HO indices
-
-        angle0_arr = np.zeros(nhoa_indices)  # array of starting xyz bond-lengths
-        for i in range(nhoa_indices):
-            angle0_arr[i] = get_angle_3d(
-                starting_xyz[aho_indices1[i], :], starting_xyz[aho_indices2[i], :], starting_xyz[aho_indices3[i], :]
-            )
-        print('angle0_arr')
-        print(angle0_arr)
-
         total_harmonic_contrib = 0
-        total_angle_harmonic_contrib = 0
         total_xray_contrib = 0
 
         ##=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=##
@@ -222,12 +203,6 @@ class Annealing:
                     mdisp[n, :, :] * step_size_array[n] * tmp * (2 * random() - 1)
                 )
             xyz_ = xyz + summed_displacement  # save a temporary displaced xyz: xyz_
-            ### Forced symmetry for SF6 specific part!!! ###
-            # force all bonds to equal bond 0-1
-            # move F along S-F vector so each S-F = len01
-            # Trigonometry ...
-            # ... insert code
-            ### END Forced symmetry for SF6 specific part!!! ###
             ##=#=#=# END DISPLACE XYZ RANDOMLY ALONG ALL DISPLACEMENT VECTORS #=#=#=##
 
             ##=#=#=# IAM CALCULATION #=#=#=##
@@ -256,8 +231,8 @@ class Annealing:
             ### x-ray part of chi2
             # xray_contrib = np.sum((predicted_function_ - target_function) ** 2) / qlen
             xray_contrib = (
-                np.sum((predicted_function_ - target_function) ** 2 / target_function) / qlen
-                #np.sum((predicted_function_ - target_function) ** 2) / qlen
+                #np.sum((predicted_function_ - target_function) ** 2 / target_function) / qlen
+                np.sum((predicted_function_ - target_function) ** 2) / qlen
             )
             ### harmonic oscillator part of chi2
             harmonic_contrib = 0
@@ -265,14 +240,8 @@ class Annealing:
                 r = LA.norm(xyz_[ho_indices1[iho], :] - xyz_[ho_indices2[iho], :])
                 harmonic_contrib += af * (r - r0_arr[iho]) ** 2
 
-            ### angluar HO terms
-            angle_harmonic_contrib = 0
-            for ihoa in range(nhoa_indices):
-                angle = get_angle_3d( xyz_[aho_indices1[ihoa], :], xyz_[aho_indices2[ihoa], :], xyz_[aho_indices3[ihoa], :] )
-                angle_harmonic_contrib += af2 * (angle - angle0_arr[ihoa]) ** 2
-
             ### combine x-ray and harmonic contributions
-            chi2_ = xray_contrib + harmonic_contrib + angle_harmonic_contrib
+            chi2_ = xray_contrib + harmonic_contrib
             ##=#=#=# END PCD & CHI2 CALCULATIONS #=#=#=##
 
             ##=#=#=# ACCEPTANCE CRITERIA #=#=#=##
@@ -286,19 +255,18 @@ class Annealing:
                     chi2_best, xyz_best, predicted_best = chi2, xyz, predicted_function_
                     chi2_xray_best = xray_contrib
                 total_harmonic_contrib += harmonic_contrib
-                total_angle_harmonic_contrib += angle_harmonic_contrib
                 total_xray_contrib += xray_contrib
             ##=#=#=# END ACCEPTANCE CRITERIA #=#=#=##
         # remove ending zeros from chi2_array
         chi2_array = chi2_array[:c]
         # print ratio of contributions to chi2
-        total_contrib = total_xray_contrib + total_harmonic_contrib + total_angle_harmonic_contrib
+        total_contrib = total_xray_contrib + total_harmonic_contrib
         xray_ratio = total_xray_contrib / total_contrib
         harmonic_ratio = total_harmonic_contrib / total_contrib
-        angle_harmonic_ratio = total_angle_harmonic_contrib / total_contrib
         print("xray contrib ratio: %f" % xray_ratio)
         print("harmonic contrib ratio: %f" % harmonic_ratio)
-        print("angular harmonic contrib ratio: %f" % angle_harmonic_ratio)
         # end function
+        print(chi2_best)
+        print(predicted_best)
         return chi2_best, predicted_best, xyz_best, chi2_array, chi2_xray_best
 
