@@ -20,8 +20,9 @@ sa = sa.Annealing()
 
 ###################################
 # command line arguments
-start_xyz_file = str(sys.argv[1])
-target_xyz_file = str(sys.argv[2])
+run_id_ = int(sys.argv[1])  # define a number to label the start of the output filenames
+start_xyz_file = str(sys.argv[2])
+target_xyz_file = str(sys.argv[3])
 ###################################
 
 #############################
@@ -49,7 +50,6 @@ q_mode = False
 ho_indices = [[0, 1, 2, 3, 4,   6, 12, 5,  5,  0, 0, 1, 2, 3,  4], 
               [1, 2, 3, 4, 5,   7, 13, 12, 13, 6, 7, 8, 9, 10, 11]]  # chd (C-C and C-H bonds)
 
-run_id_ = 0  # define a number to label the start of the output filenames
 run_id = str(run_id_).zfill(2)  # pad with zeros
 #############################
 ### end arguments         ###

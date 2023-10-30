@@ -167,7 +167,7 @@ class Annealing:
         nho_indices = len(ho_indices[0])  # number of HO indices
         r0_arr = np.zeros(nho_indices)  # array of starting xyz bond-lengths
         for i in range(nho_indices):
-            print('bond term: %i %i' % (ho_indices[0][i], ho_indices[1][i]))
+            #print('bond term: %i %i' % (ho_indices[0][i], ho_indices[1][i]))
             r0_arr[i] = np.linalg.norm(
                 starting_xyz[ho_indices[0][i], :] - starting_xyz[ho_indices[1][i], :]
             )

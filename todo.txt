@@ -1,5 +1,5 @@
 
-fine grid trajectory
-- qmax = 8
-- 20 restarts
-- 1st 30-40 frames
+trajectory
+
+target_00, target_01, target_02 =
+frame 8, 16, 24
