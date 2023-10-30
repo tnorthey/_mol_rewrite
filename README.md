@@ -103,13 +103,34 @@
 <!-- GETTING STARTED -->
 ## Getting Started
 
+The following are best practices to get started with running the scripts.
 
-### Prerequisites
-
-* Running tests
+* Create virtual environment (e.g. in the .venv directory)
+  ```sh
+  python3 -m venv .venv
+  ```
+* Enter the virtual environment
+  ```sh
+  source .venv/bin/activate
+  ```
+* Install required packages
+  ```sh
+  pip install -r requirements.txt
+  ```
+* Run the tests
   ```sh
   pytest -v 
   ```
+* Exit venv if you want with
+  ```sh
+  deactivate
+  ```
+Once you've done all that once, you only need to:
+  ```sh
+  source .venv/bin/activate
+  ```
+to run the scripts.
+
 
 <!--
 ### Installation
