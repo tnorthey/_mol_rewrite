@@ -164,15 +164,17 @@ class Annealing:
         ##=#=#=# END DEFINITIONS #=#=#=#
 
         ##=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=##
-        nho_indices = len(ho_indices)  # number of HO indices
+        nho_indices = len(ho_indices[0])  # number of HO indices
         r0_arr = np.zeros(nho_indices)  # array of starting xyz bond-lengths
         for i in range(nho_indices):
+            print('bond term: %i %i' % (ho_indices[0][i], ho_indices[1][i]))
             r0_arr[i] = np.linalg.norm(
                 starting_xyz[ho_indices[0][i], :] - starting_xyz[ho_indices[1][i], :]
             )
 
         total_harmonic_contrib = 0
         total_xray_contrib = 0
+        print('HO factor %4.3f' % af)
         ##=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=##
 
         ##=#=#=# INITIATE LOOP VARIABLES #=#=#=#=#

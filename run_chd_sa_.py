@@ -1,3 +1,6 @@
+'''
+Run the simulated annealing function for CHD
+'''
 import numpy as np
 import sys
 import scipy.io
@@ -15,14 +18,50 @@ m = mol.Xyz()
 x = xray.Xray()
 sa = sa.Annealing()
 
+###################################
+# command line arguments
+start_xyz_file = str(sys.argv[1])
+target_xyz_file = str(sys.argv[2])
+###################################
+
+#############################
+### arguments             ###
+#############################
+reference_xyz_file = 'xyz/chd_reference.xyz'
+nsteps = 8000
+qmin = 1e-9
+qmax = 8.0
+qlen = 81
+starting_temp = 0.2
+step_size = 0.01
+harmonic_factor = 0.01 # HO factor
+n_trials = 10 # repeats n_trails times, only saves lowest chi2
+
+electron_mode = False  # x-rays
+inelastic = True
+noise_bool = False
+noise = 4
+nmfile = "nm/chd_normalmodes.txt"
+pcd_mode = True
+q_mode = False
+
+#ho_indices = [[0, 1, 2, 3, 4], [1, 2, 3, 4, 5]]  # chd (C-C bonds)
+ho_indices = [[0, 1, 2, 3, 4,   6, 12, 5,  5,  0, 0, 1, 2, 3,  4], 
+              [1, 2, 3, 4, 5,   7, 13, 12, 13, 6, 7, 8, 9, 10, 11]]  # chd (C-C and C-H bonds)
+
+run_id_ = 0  # define a number to label the start of the output filenames
+run_id = str(run_id_).zfill(2)  # pad with zeros
+#############################
+### end arguments         ###
+#############################
+
+### Rarely edit after this...
+
 #############################
 ### Initialise some stuff ###
 #############################
 # qvector
-qlen = 241
-qvector = np.linspace(1e-9, 24, qlen, endpoint=True)
-
-inelastic = True
+qvector = np.linspace(qmin, qmax, qlen, endpoint=True)
 
 def xyz2iam(xyz, atomlist):
     """convert xyz file to IAM signal"""
@@ -33,9 +72,6 @@ def xyz2iam(xyz, atomlist):
     return iam
 
 # define target_function
-start_xyz_file = "xyz/chd_opt.xyz"
-reference_xyz_file = "xyz/chd_opt.xyz"
-target_xyz_file = "xyz/target.xyz"
 _, _, atomlist, starting_xyz = m.read_xyz(start_xyz_file)
 _, _, atomlist, reference_xyz = m.read_xyz(reference_xyz_file)
 _, _, atomlist, target_xyz = m.read_xyz(target_xyz_file)
@@ -44,8 +80,6 @@ starting_iam = xyz2iam(starting_xyz, atomlist)
 reference_iam = xyz2iam(reference_xyz, atomlist)
 target_iam = xyz2iam(target_xyz, atomlist)
 
-noise_bool = False
-noise = 4
 ### ADDITION OF RANDOM NOISE
 if noise_bool:
     mu = 0		# normal distribution with mean of mu
@@ -56,83 +90,95 @@ if noise_bool:
 
 target_function = 100 * (target_iam / reference_iam - 1)
 
-q_mode = False
 # multiply by q**m optionally
 if q_mode:
     print("q_mode = true")
     q_exponent = 0.5
     target_function *= qvector ** q_exponent
 
-# definitions
-non_h_indices = [0, 1, 2, 3, 4, 5]
-
-nmfile = "nm/chd_normalmodes.txt"
 natoms = starting_xyz.shape[0]
 displacements = sa.read_nm_displacements(nmfile, natoms)
 nmodes = displacements.shape[0]
 
-# mode_indices = np.arange(0, 28)  # CHD, this removes hydrogen modes
 mode_indices = np.arange(0, nmodes)  # CHD, all modes
 print("including modes:")
 print(mode_indices)
 
-step_size_array = 0.01 * np.ones(nmodes)
-
-# CHD specific; notably not indices 0, 5 (the ring-opening)
-ho_indices = [[0, 1, 2, 3, 4], [1, 2, 3, 4, 5]]  # chd specific!
-
-starting_temp = 0.2
-nsteps = 8000
-af = 0.01
-pcd_mode = True
-electron_mode = False  # x-rays
-
+step_size_array = step_size * np.ones(nmodes)
 
 #################################
 ### End Initialise some stuff ###
 #################################
-(
-    chi2_best,
-    predicted_best,
-    xyz_best,
-    chi2_array,
-    chi2_xray_best,
-) = sa.simulated_annealing_modes_ho(
-    atomlist,
-    starting_xyz,
-    reference_xyz,
-    displacements,
-    mode_indices,
-    target_function,
-    qvector,
-    step_size_array,
-    ho_indices,
-    starting_temp,
-    nsteps,
-    inelastic,
-    af,
-    pcd_mode,
-    q_mode,
-    electron_mode,
+
+chi2_best_ = 1e9
+for k in range(n_trials):
+    # Run simulated annealing
+    (
+        chi2_best,
+        predicted_best,
+        xyz_best,
+        chi2_array,
+        chi2_xray_best,
+    ) = sa.simulated_annealing_modes_ho(
+        atomlist,
+        starting_xyz,
+        reference_xyz,
+        displacements,
+        mode_indices,
+        target_function,
+        qvector,
+        step_size_array,
+        ho_indices,
+        starting_temp,
+        nsteps,
+        inelastic,
+        harmonic_factor,
+        pcd_mode,
+        q_mode,
+        electron_mode,
+    )
+
+    print("%10.8f" % chi2_best)
+
+    # store best values from the n_trials
+    if chi2_best < chi2_best_:
+        chi2_best_, chi2_xray_best_, predicted_best_, xyz_best_ = (
+            chi2_best,
+            chi2_xray_best,
+            predicted_best,
+            xyz_best,
+        )
+
+# calculate raw IAM data
+iam_best = xyz2iam(xyz_best_, atomlist)
+
+# save final IAM signal
+np.savetxt(
+    "tmp_/%s_iam_best.dat" % run_id, np.column_stack((qvector, iam_best))
 )
 
-run_id_ = 0  # define a number to label the start of the output filenames
-run_id = str(run_id_).zfill(2)  # pad with zeros
-
-print("writing to xyz... (chi2: %10.8f)" % chi2_xray_best)
-chi2_best_str = ("%10.8f" % chi2_xray_best).zfill(12)
+print("writing to xyz... (chi2: %10.8f)" % chi2_xray_best_)
+chi2_best_str = ("%10.8f" % chi2_xray_best_).zfill(12)
 m.write_xyz(
-    "%s_%s.xyz" % (run_id, chi2_best_str),
+    "tmp_/%s_%s.xyz" % (run_id, chi2_best_str),
     "run_id: %s" % run_id,
     atomlist,
-    xyz_best,
+    xyz_best_,
 )
 np.savetxt(
-    "%s_%s.dat" % (run_id, chi2_best_str),
-    np.column_stack((qvector, predicted_best)),
+    "tmp_/%s_%s.dat" % (run_id, chi2_best_str),
+    np.column_stack((qvector, predicted_best_)),
 )
 
-
-print("%10.8f" % chi2_best)
+### Final save to files
+# target function
+np.savetxt(
+    "tmp_/%s_target_function.dat" % run_id, np.column_stack((qvector, target_function))
+)
+# save raw target data:
+np.savetxt("tmp_/%s_target_iam.dat" % run_id, np.column_stack((qvector, target_iam)))
+# save starting IAM signal
+np.savetxt("tmp_/%s_starting_iam.dat" % run_id, np.column_stack((qvector, starting_iam)))
 
 print("Total time: %3.2f s" % float(default_timer() - start))
+
