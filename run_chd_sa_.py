@@ -1,15 +1,17 @@
-'''
+"""
 Run the simulated annealing function for CHD
-'''
+"""
 import numpy as np
 import sys
 import scipy.io
 from timeit import default_timer
 from numpy.random import random_sample as random
+
 # my modules
 import modules.mol as mol
 import modules.x as xray
 import modules.sa as sa
+import modules.gd as gd
 
 start = default_timer()
 
@@ -17,6 +19,7 @@ start = default_timer()
 m = mol.Xyz()
 x = xray.Xray()
 sa = sa.Annealing()
+gd = gd.G()
 
 ###################################
 # command line arguments
@@ -28,15 +31,15 @@ target_xyz_file = str(sys.argv[3])
 #############################
 ### arguments             ###
 #############################
-reference_xyz_file = 'xyz/chd_reference.xyz'
-nsteps = 8000
+reference_xyz_file = "xyz/chd_reference.xyz"
+nsteps = 800
 qmin = 1e-9
 qmax = 8.0
 qlen = 81
 starting_temp = 0.2
 step_size = 0.01
-harmonic_factor = 0.01 # HO factor
-n_trials = 10 # repeats n_trails times, only saves lowest chi2
+harmonic_factor = 0.1  # HO factor
+n_trials = 1  # repeats n_trails times, only saves lowest chi2
 
 electron_mode = False  # x-rays
 inelastic = True
@@ -46,9 +49,11 @@ nmfile = "nm/chd_normalmodes.txt"
 pcd_mode = True
 q_mode = False
 
-#ho_indices = [[0, 1, 2, 3, 4], [1, 2, 3, 4, 5]]  # chd (C-C bonds)
-ho_indices = [[0, 1, 2, 3, 4,   6, 12, 5,  5,  0, 0, 1, 2, 3,  4], 
-              [1, 2, 3, 4, 5,   7, 13, 12, 13, 6, 7, 8, 9, 10, 11]]  # chd (C-C and C-H bonds)
+# ho_indices = [[0, 1, 2, 3, 4], [1, 2, 3, 4, 5]]  # chd (C-C bonds)
+ho_indices = [
+    [0, 1, 2, 3, 4, 6, 12, 5, 5, 0, 0, 1, 2, 3, 4],
+    [1, 2, 3, 4, 5, 7, 13, 12, 13, 6, 7, 8, 9, 10, 11],
+]  # chd (C-C and C-H bonds)
 
 run_id = str(run_id_).zfill(2)  # pad with zeros
 #############################
@@ -63,13 +68,17 @@ run_id = str(run_id_).zfill(2)  # pad with zeros
 # qvector
 qvector = np.linspace(qmin, qmax, qlen, endpoint=True)
 
+
 def xyz2iam(xyz, atomlist):
     """convert xyz file to IAM signal"""
     electron_mode = False  # x-rays
     atomic_numbers = [m.periodic_table(symbol) for symbol in atomlist]
     compton_array = x.compton_spline(atomic_numbers, qvector)
-    iam, atomic, molecular, compton = x.iam_calc(atomic_numbers, xyz, qvector, electron_mode, inelastic, compton_array)
+    iam, atomic, molecular, compton = x.iam_calc(
+        atomic_numbers, xyz, qvector, electron_mode, inelastic, compton_array
+    )
     return iam
+
 
 # define target_function
 _, _, atomlist, starting_xyz = m.read_xyz(start_xyz_file)
@@ -82,7 +91,7 @@ target_iam = xyz2iam(target_xyz, atomlist)
 
 ### ADDITION OF RANDOM NOISE
 if noise_bool:
-    mu = 0		# normal distribution with mean of mu
+    mu = 0  # normal distribution with mean of mu
     sigma = noise
     noise_array = sigma * np.random.randn(qlen) + mu
     target_iam += noise_array
@@ -112,6 +121,15 @@ step_size_array = step_size * np.ones(nmodes)
 
 chi2_best_ = 1e9
 for k in range(n_trials):
+
+    if False:
+        # this isn't needed as random initial conditions happen in the simulated_annealing function anyway..
+        # random perturbation to starting xyz (to vary initial conditions)
+        delta_start = 0.01
+        a, b = -delta_start, delta_start
+        rand_arr = (b - a) * random((natoms, 3)) + a
+        xyz_perturbed = xyz + rand_arr
+
     # Run simulated annealing
     (
         chi2_best,
@@ -138,7 +156,23 @@ for k in range(n_trials):
         electron_mode,
     )
 
-    print("%10.8f" % chi2_best)
+    print('chi2_best (SA): %9.8f' % chi2_best)
+    # gradient descent...
+    starting_xyz_gd = xyz_best
+    # Target function has to be absolute I(q) for gradient descent...
+    target_function_gd = xyz2iam(starting_xyz_gd, atomlist)
+    nsteps_gd = 1000
+    step_size_gd = 0.1
+    (chi2_best, predicted_best, xyz_best) = gd.gradient_descent_cartesian(
+        target_function_gd,
+        atomic_numbers,
+        starting_xyz_gd,
+        qvector,
+        nsteps_gd,
+        step_size_gd,
+    )
+    print('chi2_best (GD): %9.8f' % chi2_best)
+    #print("%10.8f" % chi2_best)
 
     # store best values from the n_trials
     if chi2_best < chi2_best_:
@@ -153,9 +187,7 @@ for k in range(n_trials):
 iam_best = xyz2iam(xyz_best_, atomlist)
 
 # save final IAM signal
-np.savetxt(
-    "tmp_/%s_iam_best.dat" % run_id, np.column_stack((qvector, iam_best))
-)
+np.savetxt("tmp_/%s_iam_best.dat" % run_id, np.column_stack((qvector, iam_best)))
 
 print("writing to xyz... (chi2: %10.8f)" % chi2_xray_best_)
 chi2_best_str = ("%10.8f" % chi2_xray_best_).zfill(12)
@@ -178,7 +210,8 @@ np.savetxt(
 # save raw target data:
 np.savetxt("tmp_/%s_target_iam.dat" % run_id, np.column_stack((qvector, target_iam)))
 # save starting IAM signal
-np.savetxt("tmp_/%s_starting_iam.dat" % run_id, np.column_stack((qvector, starting_iam)))
+np.savetxt(
+    "tmp_/%s_starting_iam.dat" % run_id, np.column_stack((qvector, starting_iam))
+)
 
 print("Total time: %3.2f s" % float(default_timer() - start))
-

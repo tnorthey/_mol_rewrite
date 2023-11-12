@@ -228,7 +228,7 @@ class Xray:
         atomic_factor_arr = np.zeros((natoms, qlen))  # array of atomic factors
         jq = np.zeros(qlen)  # total atomic factor
         for i in range(natoms):
-            tmp = x.atomic_factor(atomic_numbers[i], qvector)
+            tmp = self.atomic_factor(atomic_numbers[i], qvector)
             atomic_factor_arr[i, :] = tmp
             jq += tmp ** 2
         return jq, atomic_factor_arr

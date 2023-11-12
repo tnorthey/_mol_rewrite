@@ -1,6 +1,12 @@
 """
 Gradient descent with IAM
 """
+import numpy as np
+# my modules
+import modules.x as xray
+
+# create class objects
+x = xray.Xray()
 
 class G:
     """Gradient descent functions"""
@@ -211,28 +217,17 @@ class G:
         natoms = xyz_.shape[0]
         print("Natoms = %i" % natoms)
 
-        # random perturbation to starting xyz (to vary initial conditions)
-        #delta_start = step_size
-        delta_start = 0.01
-        #delta_start = 0.0
-        b = -delta_start
-        a = delta_start
-        rand_arr = (b - a) * random((natoms, 3)) + a
-        print(rand_arr)
-        xyz_ += rand_arr
-        xyz_start_perturbed = xyz_
-
         # the target function, Y(q)
         Yq = target_function
 
-        # Jq, atomic factor array
-        Jq, fqi = self.jq_atomic_factors_calc(atomic_numbers, qvector)
+        # Iat, atomic factor array
+        Iat, fqi = x.jq_atomic_factors_calc(atomic_numbers, qvector)
 
         # Sq (this one only changes with xyz)
-        Imol = self.Imol_calc(fqi, xyz_, qvector)
+        Imol = x.Imol_calc(fqi, xyz_, qvector)
 
         # Compton effects
-        Icompton, compton_array = self.compton_spline_calc(atomic_numbers, qvector)
+        Icompton, compton_array = x.compton_spline_calc(atomic_numbers, qvector)
 
         # while loop
         c = 0
@@ -244,9 +239,9 @@ class G:
 
             # chi
             if pcd_mode:
-                chi1 = 100 * ((Jq + Imol + Icompton) / reference_iam - 1) - Yq
+                chi1 = 100 * ((Iat + Imol + Icompton) / reference_iam - 1) - Yq
             else:
-                chi1 = Jq + Imol + Icompton - Yq
+                chi1 = Iat + Imol + Icompton - Yq
 
             # multiply them appropriately
             for i in range(natoms):
@@ -260,20 +255,20 @@ class G:
             xyz_ -= dchi2dxyz
 
             ## Calculate Imol (molecular term)
-            Imol = self.Imol_calc(fqi, xyz_, qvector)
+            Imol = x.Imol_calc(fqi, xyz_, qvector)
             ## full IAM (atomic term + molecular term + Compton effects)
             if pcd_mode:
-                predicted_ = 100 * ((Jq + Icompton + Imol) / reference_iam - 1)
+                predicted_ = 100 * ((Iat + Icompton + Imol) / reference_iam - 1)
             else:
-                predicted_ = Jq + Icompton + Imol
+                predicted_ = Iat + Icompton + Imol
 
             ## Calculate chi2
             chi2_ = np.sum((predicted_ - Yq) ** 2) / qlen
-            print(chi2_)
+            #print(chi2_)
             if chi2_ < chi2_best:
                 chi2_best = chi2_
                 xyz_best = xyz_
                 predicted_best = predicted_
 
-        return chi2_best, predicted_best, xyz_best, xyz_start_perturbed
+        return chi2_best, predicted_best, xyz_best
 
