@@ -264,7 +264,7 @@ class G:
 
             ## Calculate chi2
             chi2_ = np.sum((predicted_ - Yq) ** 2) / qlen
-            #print(chi2_)
+            print(chi2_)
             if chi2_ < chi2_best:
                 chi2_best = chi2_
                 xyz_best = xyz_

@@ -32,14 +32,14 @@ target_xyz_file = str(sys.argv[3])
 ### arguments             ###
 #############################
 reference_xyz_file = "xyz/chd_reference.xyz"
-nsteps = 800
+nsteps = 8000
 qmin = 1e-9
 qmax = 8.0
 qlen = 81
 starting_temp = 0.2
 step_size = 0.01
 harmonic_factor = 0.1  # HO factor
-n_trials = 1  # repeats n_trails times, only saves lowest chi2
+n_trials = 4  # repeats n_trails times, only saves lowest chi2
 
 electron_mode = False  # x-rays
 inelastic = True
@@ -48,6 +48,10 @@ noise = 4
 nmfile = "nm/chd_normalmodes.txt"
 pcd_mode = True
 q_mode = False
+
+# gradient descent parameters
+nsteps_gd = 100
+step_size_gd = 0.0001
 
 # ho_indices = [[0, 1, 2, 3, 4], [1, 2, 3, 4, 5]]  # chd (C-C bonds)
 ho_indices = [
@@ -159,17 +163,18 @@ for k in range(n_trials):
     print('chi2_best (SA): %9.8f' % chi2_best)
     # gradient descent...
     starting_xyz_gd = xyz_best
+    pcd_mode = True
     # Target function has to be absolute I(q) for gradient descent...
-    target_function_gd = xyz2iam(starting_xyz_gd, atomlist)
-    nsteps_gd = 1000
-    step_size_gd = 0.1
+    #target_function_gd = xyz2iam(starting_xyz_gd, atomlist)
     (chi2_best, predicted_best, xyz_best) = gd.gradient_descent_cartesian(
-        target_function_gd,
+        target_function,
         atomic_numbers,
         starting_xyz_gd,
         qvector,
         nsteps_gd,
         step_size_gd,
+        pcd_mode,
+        reference_iam,
     )
     print('chi2_best (GD): %9.8f' % chi2_best)
     #print("%10.8f" % chi2_best)

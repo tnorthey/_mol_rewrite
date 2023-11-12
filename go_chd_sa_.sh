@@ -5,7 +5,8 @@ if [ 1 -eq 1 ]
 then
     run_id=0
     starting_xyz_file="xyz/start.xyz"
-    target_xyz_file="xyz/target_traj099/target_00.xyz"
+    #target_xyz_file="xyz/target_traj099/target_00.xyz"
+    target_xyz_file="xyz/target_traj099/target_20.xyz"
     python3 run_chd_sa_.py $run_id $starting_xyz_file $target_xyz_file
     ls tmp_
 fi
