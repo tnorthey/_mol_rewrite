@@ -26,6 +26,18 @@ gd = gd.G()
 run_id_ = int(sys.argv[1])  # define a number to label the start of the output filenames
 start_xyz_file = str(sys.argv[2])
 target_xyz_file = str(sys.argv[3])
+simulated_annealing_bool = int(sys.argv[4])
+gradient_descent_bool = int(sys.argv[5])
+if simulated_annealing_bool == 1:
+    simulated_annealing_bool = True
+elif simulated_annealing_bool == 0:
+    simulated_annealing_bool = False
+if gradient_descent_bool == 1:
+    gradient_descent_bool = True
+elif gradient_descent_bool == 0:
+    gradient_descent_bool = False
+print(simulated_annealing_bool)
+print(gradient_descent_bool)
 ###################################
 
 #############################
@@ -39,7 +51,7 @@ qlen = 81
 starting_temp = 0.2
 step_size = 0.01
 harmonic_factor = 0.1  # HO factor
-n_trials = 4  # repeats n_trails times, only saves lowest chi2
+n_trials = 1  # repeats n_trails times, only saves lowest chi2
 
 electron_mode = False  # x-rays
 inelastic = True
@@ -50,8 +62,10 @@ pcd_mode = True
 q_mode = False
 
 # gradient descent parameters
-nsteps_gd = 100
-step_size_gd = 0.0001
+nsteps_gd = 1
+#step_size_gd = 0.0001  # works (?)
+#step_size_gd = 0.000001  # 1e-6
+step_size_gd = 1e-2
 
 # ho_indices = [[0, 1, 2, 3, 4], [1, 2, 3, 4, 5]]  # chd (C-C bonds)
 ho_indices = [
@@ -124,6 +138,7 @@ step_size_array = step_size * np.ones(nmodes)
 #################################
 
 chi2_best_ = 1e9
+xyz_best = starting_xyz
 for k in range(n_trials):
 
     if False:
@@ -134,50 +149,50 @@ for k in range(n_trials):
         rand_arr = (b - a) * random((natoms, 3)) + a
         xyz_perturbed = xyz + rand_arr
 
-    # Run simulated annealing
-    (
-        chi2_best,
-        predicted_best,
-        xyz_best,
-        chi2_array,
-        chi2_xray_best,
-    ) = sa.simulated_annealing_modes_ho(
-        atomlist,
-        starting_xyz,
-        reference_xyz,
-        displacements,
-        mode_indices,
-        target_function,
-        qvector,
-        step_size_array,
-        ho_indices,
-        starting_temp,
-        nsteps,
-        inelastic,
-        harmonic_factor,
-        pcd_mode,
-        q_mode,
-        electron_mode,
-    )
+    if simulated_annealing_bool:
+        # Run simulated annealing
+        (
+            chi2_best,
+            predicted_best,
+            xyz_best,
+            chi2_array,
+            chi2_xray_best,
+        ) = sa.simulated_annealing_modes_ho(
+            atomlist,
+            starting_xyz,
+            reference_xyz,
+            displacements,
+            mode_indices,
+            target_function,
+            qvector,
+            step_size_array,
+            ho_indices,
+            starting_temp,
+            nsteps,
+            inelastic,
+            harmonic_factor,
+            pcd_mode,
+            q_mode,
+            electron_mode,
+        )
 
-    print('chi2_best (SA): %9.8f' % chi2_best)
-    # gradient descent...
-    starting_xyz_gd = xyz_best
-    pcd_mode = True
-    # Target function has to be absolute I(q) for gradient descent...
-    #target_function_gd = xyz2iam(starting_xyz_gd, atomlist)
-    (chi2_best, predicted_best, xyz_best) = gd.gradient_descent_cartesian(
-        target_function,
-        atomic_numbers,
-        starting_xyz_gd,
-        qvector,
-        nsteps_gd,
-        step_size_gd,
-        pcd_mode,
-        reference_iam,
-    )
-    print('chi2_best (GD): %9.8f' % chi2_best)
-    #print("%10.8f" % chi2_best)
+        print('chi2_best (SA): %9.8f' % chi2_best)
+    if gradient_descent_bool:
+        # gradient descent...
+        starting_xyz_gd = xyz_best
+        pcd_mode = True
+        (chi2_best, predicted_best, xyz_best) = gd.gradient_descent_cartesian(
+            target_function,
+            atomic_numbers,
+            starting_xyz_gd,
+            qvector,
+            nsteps_gd,
+            step_size_gd,
+            pcd_mode,
+            reference_iam,
+        )
+        print('chi2_best (GD): %9.8f' % chi2_best)
+        chi2_xray_best = chi2_best
 
     # store best values from the n_trials
     if chi2_best < chi2_best_:

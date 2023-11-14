@@ -1,5 +1,2 @@
 
-trajectory
-
-target_00, 01, 02, 03, 04  =
-frame   8, 12, 16, 20, 24
+- fix spiral problem w. pcd gradient descent
