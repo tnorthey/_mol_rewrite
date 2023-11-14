@@ -25,7 +25,7 @@ class G:
         ###     qvector,    1D array of size qlen
         ### Outputs:
         ###     dImoldx_,    3D array of size (qlen, natoms, 3)
-        ###      it is an array of partial derivatives of S(q) at each point in q,
+        ###      it is an array of partial derivatives of Imol(q) at each point in q,
         ###      and for each Cartesian (there are natoms * 3 of them)
         # print("start of dImoldx function")
         # distance array, rij
@@ -38,7 +38,7 @@ class G:
                 for k in range(3):
                     rij = (np.sum((xyz[i, :] - xyz[j, :]) ** 2)) ** 0.5
                     qr = qvector * rij
-                    dImoldx_[:, i, k] += (  # is this right...? djflkdjfdlkjf
+                    dImoldx_[:, i, k] += (  # is this right...?
                         2
                         * 2
                         * qvector

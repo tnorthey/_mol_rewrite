@@ -1,2 +1,5 @@
 
 - fix spiral problem w. pcd gradient descent
+
+- test dImoldx() function by putting in values where you know the answer...
+  - actually write the unit test
