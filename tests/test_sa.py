@@ -93,7 +93,7 @@ step_size_array = 0.01 * np.ones(nmodes)
 ho_indices = [[0, 1, 2, 3, 4], [1, 2, 3, 4, 5]]  # chd specific!
 
 starting_temp = 0.2
-nsteps = 100
+nsteps = 20
 af = 0.01
 pcd_mode = True
 electron_mode = False  # x-rays
@@ -130,6 +130,9 @@ def test_simulated_annealing_modes_ho():
         q_mode,
         electron_mode,
     )
+    # it outputs xyz correctly (correct shape)
     assert xyz_best.shape == starting_xyz.shape, "xyz_best.shape != starting_xyz.shape"
-    # assert other things to check..
+    assert chi2_best >= chi2_xray_best, "total target function should be greater (or equal) than x-ray component"
+    assert predicted_best.shape == target_function.shape, "predicted_best.shape != target_function.shape"
+    assert len(chi2_array) <= nsteps, "len(chi2_array) !<= nsteps"
 

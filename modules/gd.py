@@ -51,6 +51,96 @@ class G:
         return dImoldx_
 
 
+    def gradient_descent_cartesian(
+        self,
+        target_function,
+        atomic_numbers,
+        starting_xyz,
+        qvector,
+        nsteps=1000,
+        step_size=0.1,
+        pcd_mode=False,
+        reference_iam=0,
+    ):
+        #### untested with pcd_mode! #### !!!!!
+        """Gradient descent in Cartesians"""
+
+        qlen = len(qvector)
+        # starting xyz
+        xyz_ = starting_xyz
+        natoms = xyz_.shape[0]
+        print("Natoms = %i" % natoms)
+
+        # the target function, Y(q)
+        Yq = target_function
+
+        # Iat, atomic factor array
+        Iat, fqi = x.jq_atomic_factors_calc(atomic_numbers, qvector)
+
+        # Sq (this one only changes with xyz)
+        Imol = x.Imol_calc(fqi, xyz_, qvector)
+
+        # Compton effects
+        Icompton, compton_array = x.compton_spline_calc(atomic_numbers, qvector)
+
+        # while loop
+        c = 0
+        chi2_best = 1e9
+        while c < nsteps:
+            c += 1
+
+            dImoldx_ = self.dImoldx(xyz_, fqi, qvector)  # partial derivatives of S(q)
+            print('dImoldx_')
+            print(dImoldx_)
+            print('end dImoldx_')
+
+            # chi
+            if pcd_mode:
+                chi1 = 100 * ((Iat + Imol + Icompton) / reference_iam - 1) - Yq
+            else:
+                chi1 = Iat + Imol + Icompton - Yq
+
+            print('chi1')
+            # The first term of chi1 is 0 (as expected?), is that why? It's possibly multiplied wrong?
+            print(chi1)
+            # multiply them appropriately
+            for i in range(natoms):
+                for k in range(3):
+                    dImoldx_[:, i, k] *= chi1
+
+            print(dImoldx_)
+            #### propagated from here ... ERROR HERE, LAST ROW IS ALWAYS ALL ZEROS...
+            # partial derivatives of chi2
+            dchi2dxyz = 2 * step_size * np.sum(dImoldx_, axis=0) / qlen
+
+            # go downhill
+            print(dchi2dxyz)
+            #### ... ERROR HERE, LAST ROW IS ALWAYS ALL ZEROS...
+            xyz_ -= dchi2dxyz
+
+            ## Calculate Imol (molecular term)
+            Imol = x.Imol_calc(fqi, xyz_, qvector)
+            ## full IAM (atomic term + molecular term + Compton effects)
+            if pcd_mode:
+                predicted_ = 100 * ((Iat + Icompton + Imol) / reference_iam - 1)
+            else:
+                predicted_ = Iat + Icompton + Imol
+
+            ## Calculate chi2
+            chi2_ = np.sum((predicted_ - Yq) ** 2) / qlen
+            print(chi2_)
+            if chi2_ < chi2_best:
+                chi2_best = chi2_
+                xyz_best = xyz_
+                predicted_best = predicted_
+
+        return chi2_best, predicted_best, xyz_best
+
+
+    ##################################
+    """ second derivative stuff... """
+    ##################################
+
     def d2Imoldxi2(self, xyz, fqi, qvector):
         """2nd partial derviative of Imol(q) wrt xi"""
         ### Inputs:
@@ -196,79 +286,4 @@ class G:
 
         return eigenvalues, eigenvectors
 
-
-    def gradient_descent_cartesian(
-        self,
-        target_function,
-        atomic_numbers,
-        starting_xyz,
-        qvector,
-        nsteps=1000,
-        step_size=0.1,
-        pcd_mode=False,
-        reference_iam=0,
-    ):
-        #### untested with pcd_mode! #### !!!!!
-        """Gradient descent in Cartesians"""
-
-        qlen = len(qvector)
-        # starting xyz
-        xyz_ = starting_xyz
-        natoms = xyz_.shape[0]
-        print("Natoms = %i" % natoms)
-
-        # the target function, Y(q)
-        Yq = target_function
-
-        # Iat, atomic factor array
-        Iat, fqi = x.jq_atomic_factors_calc(atomic_numbers, qvector)
-
-        # Sq (this one only changes with xyz)
-        Imol = x.Imol_calc(fqi, xyz_, qvector)
-
-        # Compton effects
-        Icompton, compton_array = x.compton_spline_calc(atomic_numbers, qvector)
-
-        # while loop
-        c = 0
-        chi2_best = 1e9
-        while c < nsteps:
-            c += 1
-
-            dImoldx_ = self.dImoldx(xyz_, fqi, qvector)  # partial derivatives of S(q)
-
-            # chi
-            if pcd_mode:
-                chi1 = 100 * ((Iat + Imol + Icompton) / reference_iam - 1) - Yq
-            else:
-                chi1 = Iat + Imol + Icompton - Yq
-
-            # multiply them appropriately
-            for i in range(natoms):
-                for k in range(3):
-                    dImoldx_[:, i, k] *= chi1
-
-            # partial derivatives of chi2
-            dchi2dxyz = 2 * step_size * np.sum(dImoldx_, axis=0) / qlen
-
-            # go downhill
-            xyz_ -= dchi2dxyz
-
-            ## Calculate Imol (molecular term)
-            Imol = x.Imol_calc(fqi, xyz_, qvector)
-            ## full IAM (atomic term + molecular term + Compton effects)
-            if pcd_mode:
-                predicted_ = 100 * ((Iat + Icompton + Imol) / reference_iam - 1)
-            else:
-                predicted_ = Iat + Icompton + Imol
-
-            ## Calculate chi2
-            chi2_ = np.sum((predicted_ - Yq) ** 2) / qlen
-            print(chi2_)
-            if chi2_ < chi2_best:
-                chi2_best = chi2_
-                xyz_best = xyz_
-                predicted_best = predicted_
-
-        return chi2_best, predicted_best, xyz_best
 

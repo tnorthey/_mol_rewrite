@@ -62,10 +62,10 @@ pcd_mode = True
 q_mode = False
 
 # gradient descent parameters
-nsteps_gd = 1
+nsteps_gd = 50000
 #step_size_gd = 0.0001  # works (?)
 #step_size_gd = 0.000001  # 1e-6
-step_size_gd = 1e-2
+step_size_gd = 1e-5
 
 # ho_indices = [[0, 1, 2, 3, 4], [1, 2, 3, 4, 5]]  # chd (C-C bonds)
 ho_indices = [
@@ -180,7 +180,9 @@ for k in range(n_trials):
     if gradient_descent_bool:
         # gradient descent...
         starting_xyz_gd = xyz_best
-        pcd_mode = True
+        #pcd_mode = True
+        target_function = target_iam
+        pcd_mode = False
         (chi2_best, predicted_best, xyz_best) = gd.gradient_descent_cartesian(
             target_function,
             atomic_numbers,

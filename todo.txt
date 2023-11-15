@@ -1,5 +1,11 @@
 
 - fix spiral problem w. pcd gradient descent
+  - last atom never moves; clearly an error
+    - with pcd_mode on or off
 
 - test dImoldx() function by putting in values where you know the answer...
-  - actually write the unit test
+  - (done) write the unit test
+  - ... I can't think of an example where I know the answer!
+
+
+- isn't it true that using PCD gives an error via a theoretical reference structure which may not match experiment (we are assuming it does)? Absolute I(q) would not have this problem...

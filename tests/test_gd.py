@@ -51,6 +51,8 @@ def test_dImoldx():
     print(dImoldx.shape)
     print(dImoldx)
     assert dImoldx.shape == (qlen, natoms, 3)
+    # more assertations.. I have not proved it actually works correctly!
+    # (15 Nov: likely not correct as last row is all zeros always)
 
-test_dImoldx()
+#test_dImoldx()
 
