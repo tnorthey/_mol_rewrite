@@ -32,7 +32,6 @@ sa = sa.Annealing()
 # qvector
 qlen = 241
 qvector = np.linspace(1e-9, 24, qlen, endpoint=True)
-
 inelastic = True
 
 def xyz2iam(xyz, atomlist):
@@ -40,10 +39,12 @@ def xyz2iam(xyz, atomlist):
     electron_mode = False  # x-rays
     atomic_numbers = [m.periodic_table(symbol) for symbol in atomlist]
     compton_array = x.compton_spline(atomic_numbers, qvector)
-    iam, atomic, molecular, compton = x.iam_calc(atomic_numbers, xyz, qvector, electron_mode, inelastic, compton_array)
+    iam, atomic, molecular, compton = x.iam_calc(
+        atomic_numbers, xyz, qvector, electron_mode, inelastic, compton_array
+    )
     return iam
 
-# define target_function
+# define target_data
 start_xyz_file = "xyz/chd_opt.xyz"
 reference_xyz_file = "xyz/chd_opt.xyz"
 target_xyz_file = "xyz/target.xyz"
@@ -59,23 +60,13 @@ noise_bool = False
 noise = 4
 ### ADDITION OF RANDOM NOISE
 if noise_bool:
-    mu = 0		# normal distribution with mean of mu
+    mu = 0  # normal distribution with mean of mu
     sigma = noise
     noise_array = sigma * np.random.randn(qlen) + mu
     target_iam += noise_array
 ###
 
-target_function = 100 * (target_iam / reference_iam - 1)
-
-q_mode = False
-# multiply by q**m optionally
-if q_mode:
-    print("q_mode = true")
-    q_exponent = 0.5
-    target_function *= qvector ** q_exponent
-
-# definitions
-non_h_indices = [0, 1, 2, 3, 4, 5]
+target_data = 100 * (target_iam / reference_iam - 1)
 
 nmfile = "nm/chd_normalmodes.txt"
 natoms = starting_xyz.shape[0]
@@ -94,9 +85,10 @@ ho_indices = [[0, 1, 2, 3, 4], [1, 2, 3, 4, 5]]  # chd specific!
 
 starting_temp = 0.2
 nsteps = 20
-af = 0.01
+harmonic_factor = 0.1
 pcd_mode = True
 electron_mode = False  # x-rays
+xyz_save = True
 
 
 #################################
@@ -105,34 +97,39 @@ electron_mode = False  # x-rays
 
 
 def test_simulated_annealing_modes_ho():
-    """ test the simulated annealing function ... """
+    """test the simulated annealing function ..."""
     (
-        chi2_best,
+        f_best,
+        f_xray_best,
         predicted_best,
         xyz_best,
-        chi2_array,
-        chi2_xray_best,
+        f_array,
+        xyz_array,
     ) = sa.simulated_annealing_modes_ho(
         atomlist,
         starting_xyz,
         reference_xyz,
         displacements,
         mode_indices,
-        target_function,
+        target_data,
         qvector,
         step_size_array,
         ho_indices,
         starting_temp,
         nsteps,
         inelastic,
-        af,
+        harmonic_factor,
         pcd_mode,
-        q_mode,
         electron_mode,
+        xyz_save,
     )
     # it outputs xyz correctly (correct shape)
     assert xyz_best.shape == starting_xyz.shape, "xyz_best.shape != starting_xyz.shape"
-    assert chi2_best >= chi2_xray_best, "total target function should be greater (or equal) than x-ray component"
-    assert predicted_best.shape == target_function.shape, "predicted_best.shape != target_function.shape"
-    assert len(chi2_array) <= nsteps, "len(chi2_array) !<= nsteps"
-
+    assert (
+        f_best >= f_xray_best
+    ), "total target function should be greater (or equal) than x-ray component"
+    assert (
+        predicted_best.shape == target_data.shape
+    ), "predicted_best.shape != target_data.shape"
+    assert len(f_array) <= nsteps, "len(f_array) !<= nsteps"
+    assert xyz_array.shape[2] == nsteps, "xyz_array.shape[2] != nsteps"

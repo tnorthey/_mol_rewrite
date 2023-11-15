@@ -1,3 +1,4 @@
 #!/bin/bash
 
-rm 0?_*.*
+rm ??_*.*
+rm save_array.xyz

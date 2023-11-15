@@ -26,45 +26,35 @@ gd = gd.G()
 run_id_ = int(sys.argv[1])  # define a number to label the start of the output filenames
 start_xyz_file = str(sys.argv[2])
 target_xyz_file = str(sys.argv[3])
-simulated_annealing_bool = int(sys.argv[4])
-gradient_descent_bool = int(sys.argv[5])
-if simulated_annealing_bool == 1:
-    simulated_annealing_bool = True
-elif simulated_annealing_bool == 0:
-    simulated_annealing_bool = False
-if gradient_descent_bool == 1:
-    gradient_descent_bool = True
-elif gradient_descent_bool == 0:
-    gradient_descent_bool = False
-print(simulated_annealing_bool)
-print(gradient_descent_bool)
+simulated_annealing_bool = bool(int(sys.argv[4]))
+gradient_descent_bool = bool(int(sys.argv[5]))
 ###################################
 
 #############################
 ### arguments             ###
 #############################
 reference_xyz_file = "xyz/chd_reference.xyz"
-nsteps = 8000
+nsteps = 2000
 qmin = 1e-9
 qmax = 8.0
 qlen = 81
 starting_temp = 0.2
 step_size = 0.01
-harmonic_factor = 0.1  # HO factor
-n_trials = 1  # repeats n_trails times, only saves lowest chi2
+harmonic_factor = 0.01  # HO factor
+n_trials = 1  # repeats n_trails times, only saves lowest f
 
 electron_mode = False  # x-rays
 inelastic = True
 noise_bool = False
-noise = 4
+noise = 0
 nmfile = "nm/chd_normalmodes.txt"
 pcd_mode = True
-q_mode = False
+xyz_save = True
 
 # gradient descent parameters
-nsteps_gd = 50000
-#step_size_gd = 0.0001  # works (?)
-#step_size_gd = 0.000001  # 1e-6
+nsteps_gd = 500
+# step_size_gd = 0.0001  # works (?)
+# step_size_gd = 0.000001  # 1e-6
 step_size_gd = 1e-5
 
 # ho_indices = [[0, 1, 2, 3, 4], [1, 2, 3, 4, 5]]  # chd (C-C bonds)
@@ -117,12 +107,6 @@ if noise_bool:
 
 target_function = 100 * (target_iam / reference_iam - 1)
 
-# multiply by q**m optionally
-if q_mode:
-    print("q_mode = true")
-    q_exponent = 0.5
-    target_function *= qvector ** q_exponent
-
 natoms = starting_xyz.shape[0]
 displacements = sa.read_nm_displacements(nmfile, natoms)
 nmodes = displacements.shape[0]
@@ -137,7 +121,7 @@ step_size_array = step_size * np.ones(nmodes)
 ### End Initialise some stuff ###
 #################################
 
-chi2_best_ = 1e9
+f_best_ = 1e9
 xyz_best = starting_xyz
 for k in range(n_trials):
 
@@ -152,11 +136,12 @@ for k in range(n_trials):
     if simulated_annealing_bool:
         # Run simulated annealing
         (
-            chi2_best,
+            f_best,
+            f_xray_best,
             predicted_best,
             xyz_best,
-            chi2_array,
-            chi2_xray_best,
+            f_array,
+            xyz_array,
         ) = sa.simulated_annealing_modes_ho(
             atomlist,
             starting_xyz,
@@ -172,18 +157,23 @@ for k in range(n_trials):
             inelastic,
             harmonic_factor,
             pcd_mode,
-            q_mode,
             electron_mode,
+            xyz_save,
         )
+        print("f_best (SA): %9.8f" % f_best)
+        ### save xyz_array as an xyz trajectory
+        if xyz_save:
+            print("saving xyz array...")
+            fname = "tmp_/save_array.xyz"
+            m.write_xyz_traj(fname, atomlist, xyz_array)
 
-        print('chi2_best (SA): %9.8f' % chi2_best)
     if gradient_descent_bool:
         # gradient descent...
         starting_xyz_gd = xyz_best
-        #pcd_mode = True
+        # pcd_mode = True
         target_function = target_iam
         pcd_mode = False
-        (chi2_best, predicted_best, xyz_best) = gd.gradient_descent_cartesian(
+        (f_best, predicted_best, xyz_best) = gd.gradient_descent_cartesian(
             target_function,
             atomic_numbers,
             starting_xyz_gd,
@@ -193,14 +183,14 @@ for k in range(n_trials):
             pcd_mode,
             reference_iam,
         )
-        print('chi2_best (GD): %9.8f' % chi2_best)
-        chi2_xray_best = chi2_best
+        print("f_best (GD): %9.8f" % f_best)
+        f_xray_best = f_best
 
     # store best values from the n_trials
-    if chi2_best < chi2_best_:
-        chi2_best_, chi2_xray_best_, predicted_best_, xyz_best_ = (
-            chi2_best,
-            chi2_xray_best,
+    if f_best < f_best_:
+        f_best_, f_xray_best_, predicted_best_, xyz_best_ = (
+            f_best,
+            f_xray_best,
             predicted_best,
             xyz_best,
         )
@@ -211,16 +201,16 @@ iam_best = xyz2iam(xyz_best_, atomlist)
 # save final IAM signal
 np.savetxt("tmp_/%s_iam_best.dat" % run_id, np.column_stack((qvector, iam_best)))
 
-print("writing to xyz... (chi2: %10.8f)" % chi2_xray_best_)
-chi2_best_str = ("%10.8f" % chi2_xray_best_).zfill(12)
+print("writing to xyz... (f: %10.8f)" % f_xray_best_)
+f_best_str = ("%10.8f" % f_xray_best_).zfill(12)
 m.write_xyz(
-    "tmp_/%s_%s.xyz" % (run_id, chi2_best_str),
+    "tmp_/%s_%s.xyz" % (run_id, f_best_str),
     "run_id: %s" % run_id,
     atomlist,
     xyz_best_,
 )
 np.savetxt(
-    "tmp_/%s_%s.dat" % (run_id, chi2_best_str),
+    "tmp_/%s_%s.dat" % (run_id, f_best_str),
     np.column_stack((qvector, predicted_best_)),
 )
 

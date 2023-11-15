@@ -1,6 +1,7 @@
 import numpy as np
 from numpy.random import random_sample as random
 from numpy import linalg as LA
+
 # my modules
 import modules.mol as mol
 import modules.x as xray
@@ -84,7 +85,9 @@ class Annealing:
             xyz_traj[:, :, i] = xyz
         return xyz_traj
 
-    def atomic_pre_molecular(self, atomic_numbers, qvector, aa, bb, cc, electron_mode=False):
+    def atomic_pre_molecular(
+        self, atomic_numbers, qvector, aa, bb, cc, electron_mode=False
+    ):
         """both parts of IAM equation that don't depend on atom-atom distances"""
         # compton factors for inelastic effect
         compton_array = x.compton_spline(atomic_numbers, qvector)
@@ -114,9 +117,9 @@ class Annealing:
             for j in range(i + 1, natoms):
                 if electron_mode:
                     pre_molecular[k, :] = np.multiply(
-                            (atomic_numbers[i] - atomic_factor_array[i, :]),
-                            (atomic_numbers[j] - atomic_factor_array[j, :]),
-                        )
+                        (atomic_numbers[i] - atomic_factor_array[i, :]),
+                        (atomic_numbers[j] - atomic_factor_array[j, :]),
+                    )
                 else:
                     pre_molecular[k, :] = np.multiply(
                         atomic_factor_array[i, :], atomic_factor_array[j, :]
@@ -132,25 +135,30 @@ class Annealing:
         reference_xyz,
         displacements,
         mode_indices,
-        target_function,
+        target_data,
         qvector,
         step_size_array,
         ho_indices,
         starting_temp=0.2,
         nsteps=10000,
         inelastic=True,
-        af=1,  # HO factor
+        harmonic_factor=0.1,
         pcd_mode=False,
-        q_mode=False,
         electron_mode=False,
+        xyz_save=False,
     ):
-        """simulated annealing minimisation to target_function"""
+        """simulated annealing minimisation to target_data"""
         ##=#=#=# DEFINITIONS #=#=#=##
         ## start.xyz, reference.xyz ##
         atomic_numbers = [m.periodic_table(symbol) for symbol in atomlist]
         compton_array = x.compton_spline(atomic_numbers, qvector)
         reference_iam, _, _, _ = x.iam_calc(
-            atomic_numbers, reference_xyz, qvector, electron_mode, inelastic, compton_array
+            atomic_numbers,
+            reference_xyz,
+            qvector,
+            electron_mode,
+            inelastic,
+            compton_array,
         )
         natoms = starting_xyz.shape[0]  # number of atoms
         nmodes = displacements.shape[0]  # number of displacement vectors
@@ -159,7 +167,12 @@ class Annealing:
         qlen = len(qvector)  # length of q-vector
         aa, bb, cc = x.read_iam_coeffs()
         compton, atomic_total, pre_molecular = self.atomic_pre_molecular(
-            atomic_numbers, qvector, aa, bb, cc, electron_mode,
+            atomic_numbers,
+            qvector,
+            aa,
+            bb,
+            cc,
+            electron_mode,
         )
         ##=#=#=# END DEFINITIONS #=#=#=#
 
@@ -167,21 +180,22 @@ class Annealing:
         nho_indices = len(ho_indices[0])  # number of HO indices
         r0_arr = np.zeros(nho_indices)  # array of starting xyz bond-lengths
         for i in range(nho_indices):
-            #print('bond term: %i %i' % (ho_indices[0][i], ho_indices[1][i]))
+            # print('bond term: %i %i' % (ho_indices[0][i], ho_indices[1][i]))
             r0_arr[i] = np.linalg.norm(
                 starting_xyz[ho_indices[0][i], :] - starting_xyz[ho_indices[1][i], :]
             )
 
         total_harmonic_contrib = 0
         total_xray_contrib = 0
-        print('HO factor %4.3f' % af)
+        print("HO factor %4.3f" % harmonic_factor)
         ##=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=##
 
         ##=#=#=# INITIATE LOOP VARIABLES #=#=#=#=#
         xyz = starting_xyz
         i, c = 0, 0
-        chi2, chi2_best = 1e9, 1e10
-        chi2_array = np.zeros(nsteps)
+        f, f_best = 1e9, 1e10
+        f_array = np.zeros(nsteps)
+        xyz_array = np.zeros((natoms, 3, nsteps))
         # mdisp = displacements * step_size  # array of molecular displacements
         mdisp = displacements
         ##=#=#=# END INITIATE LOOP VARIABLES #=#=#
@@ -201,6 +215,10 @@ class Annealing:
                     mdisp[n, :, :] * step_size_array[n] * tmp * (2 * random() - 1)
                 )
             xyz_ = xyz + summed_displacement  # save a temporary displaced xyz: xyz_
+
+            # optional save xyz to array
+            if xyz_save:
+                xyz_array[:, :, i - 1] = xyz_
             ##=#=#=# END DISPLACE XYZ RANDOMLY ALONG ALL DISPLACEMENT VECTORS #=#=#=##
 
             ##=#=#=# IAM CALCULATION #=#=#=##
@@ -221,48 +239,45 @@ class Annealing:
             ##=#=#=# PCD & CHI2 CALCULATIONS #=#=#=##
             if pcd_mode:
                 predicted_function_ = 100 * (iam_ / reference_iam - 1)
-            elif q_mode:
-                predicted_function_ = iam_ * qvector ** 1.0
             else:
                 predicted_function_ = iam_
 
-            ### x-ray part of chi2
+            ### x-ray part of f
             xray_contrib = (
-                #np.sum((predicted_function_ - target_function) ** 2 / target_function) / qlen
-                np.sum((predicted_function_ - target_function) ** 2) / qlen
+                # np.sum((predicted_function_ - target_data) ** 2 / target_data) / qlen
+                np.sum((predicted_function_ - target_data) ** 2)
+                / qlen
             )
-            ### harmonic oscillator part of chi2
+            ### harmonic oscillator part of f
             harmonic_contrib = 0
             for iho in range(nho_indices):
                 r = LA.norm(xyz_[ho_indices[0][iho], :] - xyz_[ho_indices[1][iho], :])
-                harmonic_contrib += af * (r - r0_arr[iho]) ** 2
+                harmonic_contrib += harmonic_factor * (r - r0_arr[iho]) ** 2
 
             ### combine x-ray and harmonic contributions
-            chi2_ = xray_contrib + harmonic_contrib
+            f_ = xray_contrib + harmonic_contrib
             ##=#=#=# END PCD & CHI2 CALCULATIONS #=#=#=##
 
             ##=#=#=# ACCEPTANCE CRITERIA #=#=#=##
-            if chi2_ < chi2 or temp > random():
+            if f_ < f or temp > random():
                 c += 1  # count acceptances
-                chi2, xyz = chi2_, xyz_  # update chi2 and xyz
-                # save chi2 to graph
-                chi2_array[c - 1] = chi2
-                if chi2 < chi2_best:
-                    # store values corresponding to chi2_best
-                    chi2_best, xyz_best, predicted_best = chi2, xyz, predicted_function_
-                    chi2_xray_best = xray_contrib
+                f, xyz = f_, xyz_  # update f and xyz
+                # save f to graph
+                f_array[c - 1] = f
+                if f < f_best:
+                    # store values corresponding to f_best
+                    f_best, xyz_best, predicted_best = f, xyz, predicted_function_
+                    f_xray_best = xray_contrib
                 total_harmonic_contrib += harmonic_contrib
                 total_xray_contrib += xray_contrib
             ##=#=#=# END ACCEPTANCE CRITERIA #=#=#=##
-        # remove ending zeros from chi2_array
-        chi2_array = chi2_array[:c]
-        # print ratio of contributions to chi2
+        # remove ending zeros from f_array
+        f_array = f_array[:c]
+        # print ratio of contributions to f
         total_contrib = total_xray_contrib + total_harmonic_contrib
         xray_ratio = total_xray_contrib / total_contrib
         harmonic_ratio = total_harmonic_contrib / total_contrib
         print("xray contrib ratio: %f" % xray_ratio)
         print("harmonic contrib ratio: %f" % harmonic_ratio)
         # end function
-        return chi2_best, predicted_best, xyz_best, chi2_array, chi2_xray_best
-
-    
+        return f_best, f_xray_best, predicted_best, xyz_best, f_array, xyz_array

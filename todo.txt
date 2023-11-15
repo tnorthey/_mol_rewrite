@@ -1,4 +1,12 @@
 
+
+- automate distances for save_array.xyz -> r01.dat, r02.dat, ..., r56.dat 
+- plot them for different T0, N, step_size etc.
+
+
+
+=== GD ===
+
 - fix spiral problem w. pcd gradient descent
   - last atom never moves; clearly an error
     - with pcd_mode on or off
@@ -7,5 +15,7 @@
   - (done) write the unit test
   - ... I can't think of an example where I know the answer!
 
+
+=== random notes ===
 
 - isn't it true that using PCD gives an error via a theoretical reference structure which may not match experiment (we are assuming it does)? Absolute I(q) would not have this problem...
