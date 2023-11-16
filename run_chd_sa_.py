@@ -34,13 +34,13 @@ gradient_descent_bool = bool(int(sys.argv[5]))
 ### arguments             ###
 #############################
 reference_xyz_file = "xyz/chd_reference.xyz"
-nsteps = 2000
+nsteps = 200
 qmin = 1e-9
 qmax = 8.0
 qlen = 81
 starting_temp = 0.2
 step_size = 0.01
-harmonic_factor = 0.01  # HO factor
+harmonic_factor = 0.1  # HO factor
 n_trials = 1  # repeats n_trails times, only saves lowest f
 
 electron_mode = False  # x-rays
@@ -117,6 +117,20 @@ print(mode_indices)
 
 step_size_array = step_size * np.ones(nmodes)
 
+###############################################
+### Initial condition generation parameters ###
+###############################################
+# alternative step-sizes for generating initial conditions
+# > 10x step-sizes, hydrogen modes damped
+hydrogen_modes = np.arange(28, nmodes)
+h_mode_modification = np.ones(nmodes) 
+for i in hydrogen_modes:
+    h_mode_modification[i] *= 0.05
+ic_step_size_array = 10 * step_size_array * h_mode_modification
+ic_harmonic_factor = 0.1  # a stronger HO factor for IC generation
+###############################################
+###############################################
+
 #################################
 ### End Initialise some stuff ###
 #################################
@@ -125,14 +139,40 @@ f_best_ = 1e9
 xyz_best = starting_xyz
 for k in range(n_trials):
 
-    if False:
-        # this isn't needed as random initial conditions happen in the simulated_annealing function anyway..
-        # random perturbation to starting xyz (to vary initial conditions)
-        delta_start = 0.01
-        a, b = -delta_start, delta_start
-        rand_arr = (b - a) * random((natoms, 3)) + a
-        xyz_perturbed = xyz + rand_arr
-
+    if generate_initial_conditions:
+        # Run simulated annealing
+        (
+            f_best,
+            f_xray_best,
+            predicted_best,
+            xyz_best,
+            f_array,
+            xyz_array,
+        ) = sa.simulated_annealing_modes_ho(
+            atomlist,
+            starting_xyz,
+            reference_xyz,
+            displacements,
+            mode_indices,
+            target_function,
+            qvector,
+            ic_step_size_array,
+            ho_indices,
+            starting_temp,
+            ic_nsteps,
+            inelastic,
+            ic_harmonic_factor,
+            pcd_mode,
+            electron_mode,
+            False,
+        )
+        print("f_best (SA): %9.8f" % f_best)
+        ### save xyz_array as an xyz trajectory
+        ### store results... ###
+        #
+        # select lowest f_target as starting point
+        # or lowest 10-20 f_target structures...
+ 
     if simulated_annealing_bool:
         # Run simulated annealing
         (

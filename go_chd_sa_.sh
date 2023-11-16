@@ -11,7 +11,7 @@ then
     #target_xyz_file="xyz/target_traj099/target_00.xyz"
     target_xyz_file="xyz/target_traj099/target_20.xyz"  # ring-open
     python3 run_chd_sa_.py $run_id $starting_xyz_file $target_xyz_file $simulated_annealing $gradient_descent
-    ls tmp_
+    #ls tmp_
 fi
 
 # steps 01 - 08

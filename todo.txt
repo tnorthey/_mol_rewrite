@@ -1,4 +1,16 @@
 
+- add find_initial_conditions step in run_sa.py
+  > 100 loop of N=200, ds=0.1, t=0.2, A=0.1, H-modes off
+
+
+- strategy:
+  > "find initial conditions" function
+  > 200 steps of larger step-size e.g. 0.1 seems to work
+    >> "fix hydrogens" somehow... because they go crazy
+       >>> during this phase don't move them at all ??? Or move them the same amount as their carbon?
+           --- i.e. set the displacements to 0 for hydrogens
+       >>> OR at the end calculate the carbon displacement, and reset the H to starting_H + that displacement    
+    >> select the ~10 of those with lowest f_targ as starting points
 
 - automate distances for save_array.xyz -> r01.dat, r02.dat, ..., r56.dat 
 - plot them for different T0, N, step_size etc.
