@@ -42,15 +42,6 @@ class Annealing:
                     displacements[j, dindex, 2] = tmp[i, j]  # z coordinates
         return displacements
 
-    def uniform_factors(self, nmodes, displacement_factors):
-        """uniformly random displacement step along each mode"""
-        factors = np.zeros(nmodes)
-        for j in range(nmodes):
-            # random factors in range [-a, a]
-            a = displacement_factors[j]
-            factors[j] = 2 * a * random.random_sample() - a
-        return factors
-
     def displacements_from_wavenumbers(self, wavenumbers, step_size, exponential=False):
         nmodes = len(wavenumbers)
         displacement_factors = np.zeros(nmodes)
@@ -64,6 +55,17 @@ class Annealing:
                 displacement_factors[i] = 0.0
         displacement_factors *= step_size  # adjust max size of displacement step
         return displacement_factors
+
+    def uniform_factors(self, nmodes, displacement_factors):
+        """uniformly random displacement step along each mode"""
+        # initialise random number generator (with random seed)
+        rng = np.random.default_rng()
+        factors = np.zeros(nmodes)
+        for j in range(nmodes):
+            # random factors in range [-a, a]
+            a = displacement_factors[j]
+            factors[j] = 2 * a * rng.random() - a
+        return factors
 
     def simulate_trajectory(
         self, starting_xyz, displacements, wavenumbers, nsteps, step_size
@@ -149,6 +151,8 @@ class Annealing:
     ):
         """simulated annealing minimisation to target_data"""
         ##=#=#=# DEFINITIONS #=#=#=##
+        # initialise random number generator (with random seed)
+        rng = np.random.default_rng()
         ## start.xyz, reference.xyz ##
         atomic_numbers = [m.periodic_table(symbol) for symbol in atomlist]
         compton_array = x.compton_spline(atomic_numbers, qvector)
@@ -212,7 +216,7 @@ class Annealing:
             summed_displacement = np.zeros(mdisp[0, :, :].shape)
             for n in mode_indices:
                 summed_displacement += (
-                    mdisp[n, :, :] * step_size_array[n] * tmp * (2 * random() - 1)
+                    mdisp[n, :, :] * step_size_array[n] * tmp * (2 * rng.random() - 1)
                 )
             xyz_ = xyz + summed_displacement  # save a temporary displaced xyz: xyz_
 
@@ -259,7 +263,7 @@ class Annealing:
             ##=#=#=# END PCD & CHI2 CALCULATIONS #=#=#=##
 
             ##=#=#=# ACCEPTANCE CRITERIA #=#=#=##
-            if f_ < f or temp > random():
+            if f_ < f or temp > rng.random():
                 c += 1  # count acceptances
                 f, xyz = f_, xyz_  # update f and xyz
                 # save f to graph

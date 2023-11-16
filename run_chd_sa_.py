@@ -34,14 +34,14 @@ gradient_descent_bool = bool(int(sys.argv[5]))
 ### arguments             ###
 #############################
 reference_xyz_file = "xyz/chd_reference.xyz"
-nsteps = 200
+nsteps = 20000
 qmin = 1e-9
 qmax = 8.0
 qlen = 81
 starting_temp = 0.2
 step_size = 0.01
-harmonic_factor = 0.1  # HO factor
-n_trials = 1  # repeats n_trails times, only saves lowest f
+harmonic_factor = 0.01  # HO factor
+n_trials = 20  # repeats n_trails times, only saves lowest f
 
 electron_mode = False  # x-rays
 inelastic = True
@@ -49,7 +49,7 @@ noise_bool = False
 noise = 0
 nmfile = "nm/chd_normalmodes.txt"
 pcd_mode = True
-xyz_save = True
+xyz_save = False
 
 # gradient descent parameters
 nsteps_gd = 500
@@ -128,6 +128,9 @@ for i in hydrogen_modes:
     h_mode_modification[i] *= 0.05
 ic_step_size_array = 10 * step_size_array * h_mode_modification
 ic_harmonic_factor = 0.1  # a stronger HO factor for IC generation
+ninitials = 1000
+ic_nsteps = 200
+generate_initial_conditions = True
 ###############################################
 ###############################################
 
@@ -135,11 +138,9 @@ ic_harmonic_factor = 0.1  # a stronger HO factor for IC generation
 ### End Initialise some stuff ###
 #################################
 
-f_best_ = 1e9
-xyz_best = starting_xyz
-for k in range(n_trials):
-
-    if generate_initial_conditions:
+if generate_initial_conditions:
+    f_best_ = 1e9
+    for j in range(ninitials):
         # Run simulated annealing
         (
             f_best,
@@ -167,13 +168,37 @@ for k in range(n_trials):
             False,
         )
         print("f_best (SA): %9.8f" % f_best)
-        ### save xyz_array as an xyz trajectory
-        ### store results... ###
-        #
-        # select lowest f_target as starting point
-        # or lowest 10-20 f_target structures...
+
+        ### store results as xyz files ###
+        print("writing to xyz... (f: %10.8f)" % f_best)
+        f_best_str = ("%10.8f" % f_best).zfill(12)
+        m.write_xyz(
+            "tmp_/ic_%s_%s.xyz" % (run_id, f_best_str),
+            "run_id: %s" % run_id,
+            atomlist,
+            xyz_best,
+        )
+
+        # store best value from the n_initials
+        if f_best < f_best_:
+            f_best_, f_xray_best_, predicted_best_, xyz_best_ = (
+                f_best,
+                f_xray_best,
+                predicted_best,
+                xyz_best,
+            )
+    # Finally,
+    # this will be the starting point for the full run in the next step
+    print('IC generation complete.')
+    print('starting_xyz chosen: f_best = %9.8f f_xray_best = %9.8f' % (f_best_, f_xray_best_))
+    starting_xyz = xyz_best_
+
+f_best_ = 1e9
+xyz_best = starting_xyz
+for k in range(n_trials):
  
     if simulated_annealing_bool:
+        starting_temp = 0
         # Run simulated annealing
         (
             f_best,
@@ -206,6 +231,7 @@ for k in range(n_trials):
             print("saving xyz array...")
             fname = "tmp_/save_array.xyz"
             m.write_xyz_traj(fname, atomlist, xyz_array)
+
 
     if gradient_descent_bool:
         # gradient descent...
