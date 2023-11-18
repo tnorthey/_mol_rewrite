@@ -73,3 +73,12 @@ def test_distances_array():
     dist_array = m.distances_array(xyz)
     assert dist_array[1, 2] == 2, "distance between hydrogens != 2"
 
+def test_new_dihedral():
+    xyzheader, comment, atomlist, xyz = m.read_xyz("xyz/chd_opt.xyz")
+    p0 = np.array(xyz[0, :])
+    p1 = np.array(xyz[1, :])
+    p4 = np.array(xyz[4, :])
+    p5 = np.array(xyz[5, :])
+    dihedral = m.new_dihedral(np.array([p0, p1, p4, p5]))
+    assert round(dihedral, 4) == 23.4195  # compared to VMD angle
+

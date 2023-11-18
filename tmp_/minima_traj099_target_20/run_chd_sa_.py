@@ -41,7 +41,7 @@ qlen = 81
 starting_temp = 0.2
 step_size = 0.01
 harmonic_factor = 0.01  # HO factor
-n_trials = 1  # repeats n_trails times, only saves lowest f
+n_trials = 20  # repeats n_trails times, only saves lowest f
 
 electron_mode = False  # x-rays
 inelastic = True
@@ -131,7 +131,6 @@ ic_harmonic_factor = 0.1  # a stronger HO factor for IC generation
 ninitials = 1000
 ic_nsteps = 200
 generate_initial_conditions = True
-save_ic_xyzs = False
 ###############################################
 ###############################################
 
@@ -170,16 +169,15 @@ if generate_initial_conditions:
         )
         print("f_best (SA): %9.8f" % f_best)
 
-        if save_ic_xyzs:
-            ### store results as xyz files ###
-            print("writing to xyz... (f: %10.8f)" % f_best)
-            f_best_str = ("%10.8f" % f_best).zfill(12)
-            m.write_xyz(
-                "tmp_/ic_%s_%s.xyz" % (run_id, f_best_str),
-                "run_id: %s" % run_id,
-                atomlist,
-                xyz_best,
-            )
+        ### store results as xyz files ###
+        print("writing to xyz... (f: %10.8f)" % f_best)
+        f_best_str = ("%10.8f" % f_best).zfill(12)
+        m.write_xyz(
+            "tmp_/ic_%s_%s.xyz" % (run_id, f_best_str),
+            "run_id: %s" % run_id,
+            atomlist,
+            xyz_best,
+        )
 
         # store best value from the n_initials
         if f_best < f_best_:
