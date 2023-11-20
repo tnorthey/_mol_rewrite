@@ -1,4 +1,7 @@
 
+- RMSD vs ninitials
+- 10,000 - 100,000 ICs -> start from best one: ~100 SA restarts -> output all of those..
+
 - run ~100 minima searches, compare them all...
   - do it again for another jump forward e.g. to target_30 or 40 (starting from 20)
 
