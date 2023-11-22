@@ -1,8 +1,5 @@
 #!/bin/bash
 
-simulated_annealing=1
-gradient_descent=0
-
 # "0th" step
 if [ 1 -eq 1 ]
 then
@@ -10,7 +7,7 @@ then
     starting_xyz_file="xyz/start.xyz"
     #target_xyz_file="xyz/target_traj099/target_00.xyz"
     target_xyz_file="xyz/target_traj099/target_20.xyz"  # ring-open
-    python3 strategy1_chd_.py $run_id $starting_xyz_file $target_xyz_file $simulated_annealing $gradient_descent
+    python3 run_strategy1_chd_.py $run_id $starting_xyz_file $target_xyz_file
     #ls tmp_
 fi
 

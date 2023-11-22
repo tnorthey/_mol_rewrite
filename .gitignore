@@ -11,6 +11,7 @@ iam_arrays*.npz
 *.npz
 *.png # don't save images
 xyz/*.png
+tmp_/*.png
 notebooks/*.png
 notebooks/*.np[yz]
 data/*
