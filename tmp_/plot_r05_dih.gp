@@ -73,7 +73,7 @@ POS3 = "at graph 0.55, 0.45 font 'helvetica, 40'"
 # Enable the use of macros
 set macros
 
-set output "plot.png"
+set output "plot_r05_dih.png"
 
 XMIN = 1.0
 XMAX = 2.5
@@ -98,8 +98,10 @@ LW2 = 1
 DT1 = 1
 DT2 = 2
 DT3 = 3
-plot "< paste 30_ic_r05_array.dat 30_ic_dihedral_array.dat" u 1:2 t "" w p pt 6 ps 2 lw 4 lc 0,\
-     #"< paste 1000_200_r05_array.dat 1000_200_dihedral_array.dat" u 1:2 t "" w p pt 6 ps 2 lw 4 lc 7
+plot "< paste 1000_100_ic_r05_array.dat 1000_100_ic_dihedral_array.dat" u 1:2 t "" w p pt 6 ps 2 lw 4 lc 0,\
+     "< paste 1000_200_ic_r05_array.dat 1000_200_ic_dihedral_array.dat" u 1:2 t "" w p pt 6 ps 2 lw 4 lc 1,\
+     "< paste 1000_400_ic_r05_array.dat 1000_400_ic_dihedral_array.dat" u 1:2 t "" w p pt 6 ps 2 lw 4 lc 2,\
+     "< paste 1000_800_ic_r05_array.dat 1000_800_ic_dihedral_array.dat" u 1:2 t "" w p pt 6 ps 2 lw 4 lc 3,\
 
 # --- GRAPH b
 @MMARGIN; @LMARGIN

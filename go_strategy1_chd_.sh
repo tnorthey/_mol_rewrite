@@ -3,12 +3,20 @@
 # "0th" step
 if [ 1 -eq 1 ]
 then
-    run_id=0
-    starting_xyz_file="xyz/start.xyz"
+    run_id="30"
+    #starting_xyz_file="xyz/start.xyz"
+    starting_xyz_file="tmp_/target_20_best_00_000.00304575.xyz"
     #target_xyz_file="xyz/target_traj099/target_00.xyz"
-    target_xyz_file="xyz/target_traj099/target_20.xyz"  # ring-open
+    #target_xyz_file="xyz/target_traj099/target_20.xyz"  # ring-open
+    target_xyz_file="xyz/target_traj099/target_30.xyz"  # ring-open
     python3 run_strategy1_chd_.py $run_id $starting_xyz_file $target_xyz_file
-    #ls tmp_
+    info="1000_400"
+    cd tmp_
+    gnuplot plot.gp
+    cp plot.png "$info"_plot.png
+    cp "$run_id"_ic_r05_array.dat "$info"_ic_r05_array.dat
+    cp "$run_id"_ic_dihedral_array.dat "$info"_ic_dihedral_array.dat
+    cd -
 fi
 
 # steps 01 - 08

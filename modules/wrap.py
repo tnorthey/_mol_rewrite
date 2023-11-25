@@ -313,11 +313,11 @@ class Wrapper:
         )
 
         # I save them to dat files too; for quicker checking
-        np.savetxt("tmp_/dihedral_array.dat", dihedral_array)
-        np.savetxt("tmp_/r05_array.dat", r05_array)
-        np.savetxt("tmp_/ic_dihedral_array.dat", ic_dihedral_array)
-        np.savetxt("tmp_/ic_r05_array.dat", ic_r05_array)
-        m.write_xyz_traj("tmp_/xyz_best_array.xyz", atomlist, xyz_best_array)
+        np.savetxt("tmp_/%s_dihedral_array.dat" % run_id, dihedral_array)
+        np.savetxt("tmp_/%s_r05_array.dat" % run_id, r05_array)
+        np.savetxt("tmp_/%s_ic_dihedral_array.dat" % run_id, ic_dihedral_array)
+        np.savetxt("tmp_/%s_ic_r05_array.dat" % run_id, ic_r05_array)
+        m.write_xyz_traj("tmp_/%s_xyz_best_array.xyz" % run_id, atomlist, xyz_best_array)
 
         ### Final save to files
         # target function
