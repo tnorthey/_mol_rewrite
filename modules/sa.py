@@ -148,6 +148,7 @@ class Annealing:
         pcd_mode=False,
         electron_mode=False,
         xyz_save=False,
+        twod_mode=False,
     ):
         """simulated annealing minimisation to target_data"""
         ##=#=#=# DEFINITIONS #=#=#=##
@@ -156,14 +157,27 @@ class Annealing:
         ## start.xyz, reference.xyz ##
         atomic_numbers = [m.periodic_table(symbol) for symbol in atomlist]
         compton_array = x.compton_spline(atomic_numbers, qvector)
-        reference_iam, _, _, _ = x.iam_calc(
-            atomic_numbers,
-            reference_xyz,
-            qvector,
-            electron_mode,
-            inelastic,
-            compton_array,
-        )
+        # reference signal (for percent difference)
+        if twod_mode:
+            (
+                reference_iam,
+                atomic_2d,
+                molecular_2d,
+                atomic_factor_array,
+                rotavg,
+                qx,
+                qy,
+                qz,
+            ) = x.iam_calc_2d(atomic_numbers, reference_xyz, qvector)
+        else:
+            reference_iam, _, _, _ = x.iam_calc(
+                atomic_numbers,
+                reference_xyz,
+                qvector,
+                electron_mode,
+                inelastic,
+                compton_array,
+            )
         natoms = starting_xyz.shape[0]  # number of atoms
         nmodes = displacements.shape[0]  # number of displacement vectors
         modes = list(range(nmodes))  # all modes
@@ -226,18 +240,29 @@ class Annealing:
             ##=#=#=# END DISPLACE XYZ RANDOMLY ALONG ALL DISPLACEMENT VECTORS #=#=#=##
 
             ##=#=#=# IAM CALCULATION #=#=#=##
-            ## this takes 84% of the run time ... ##
-            ## can it be optimised further? ##
-            molecular = np.zeros(qlen)  # total molecular factor
-            k = 0
-            for ii in range(natoms):
-                for jj in range(ii + 1, natoms):  # j > i
-                    qdij = qvector * LA.norm(xyz_[ii, :] - xyz_[jj, :])
-                    molecular += pre_molecular[k, :] * np.sin(qdij) / qdij
-                    k += 1
-            iam_ = atomic_total + 2 * molecular
-            if inelastic:
-                iam_ += compton
+            if twod_mode:
+                molecular = np.zeros((qlen, qlen))  # total molecular factor
+                for ii in range(natoms):
+                    for jj in range(ii + 1, natoms):  # j > i
+                        fij = np.multiply(
+                            atomic_factor_array[ii, :, :], atomic_factor_array[jj, :, :]
+                        )
+                        xij = xyz_[ii, 0] - xyz_[jj, 0]
+                        yij = xyz_[ii, 1] - xyz_[jj, 1]
+                        zij = xyz_[ii, 2] - xyz_[jj, 2]
+                        molecular += fij * np.cos(qx * xij + qy * yij + qz * zij)
+                iam_ = atomic_2d + 2 * molecular
+            else:  # assumed to be an isotropic 1D signal
+                molecular = np.zeros(qlen)  # total molecular factor
+                k = 0
+                for ii in range(natoms):
+                    for jj in range(ii + 1, natoms):  # j > i
+                        qdij = qvector * LA.norm(xyz_[ii, :] - xyz_[jj, :])
+                        molecular += pre_molecular[k, :] * np.sin(qdij) / qdij
+                        k += 1
+                iam_ = atomic_total + 2 * molecular
+                if inelastic:
+                    iam_ += compton
             ##=#=#=# END IAM CALCULATION #=#=#=##
 
             ##=#=#=# PCD & CHI2 CALCULATIONS #=#=#=##
@@ -247,11 +272,14 @@ class Annealing:
                 predicted_function_ = iam_
 
             ### x-ray part of f
-            xray_contrib = (
-                # np.sum((predicted_function_ - target_data) ** 2 / target_data) / qlen
-                np.sum((predicted_function_ - target_data) ** 2)
-                / qlen
-            )
+            if twod_mode:
+                xray_contrib = (
+                    np.sum((predicted_function_ - target_data) ** 2 / np.abs(target_data))
+                    / qlen
+                )
+            else:
+                xray_contrib = np.sum((predicted_function_ - target_data) ** 2) / qlen
+
             ### harmonic oscillator part of f
             harmonic_contrib = 0
             for iho in range(nho_indices):

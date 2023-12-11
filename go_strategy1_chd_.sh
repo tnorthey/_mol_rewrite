@@ -3,12 +3,14 @@
 # "0th" step
 if [ 1 -eq 1 ]
 then
-    run_id="30"
+    run_id="35"
     #starting_xyz_file="xyz/start.xyz"
-    starting_xyz_file="tmp_/target_20_best_00_000.00304575.xyz"
+    #starting_xyz_file="tmp_/target_20_best_00_000.00304575.xyz"
+    starting_xyz_file="xyz/target_traj099/target_30.xyz"  # ring-open
     #target_xyz_file="xyz/target_traj099/target_00.xyz"
     #target_xyz_file="xyz/target_traj099/target_20.xyz"  # ring-open
-    target_xyz_file="xyz/target_traj099/target_30.xyz"  # ring-open
+    target_xyz_file="xyz/target_traj099/target_35.xyz"  # ring-open
+    #target_xyz_file="xyz/target_traj099/target_25.xyz"  # ring-open
     python3 run_strategy1_chd_.py $run_id $starting_xyz_file $target_xyz_file
     info="1000_400"
     cd tmp_

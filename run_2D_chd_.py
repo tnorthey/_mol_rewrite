@@ -27,24 +27,18 @@ target_xyz_file = str(sys.argv[3])
 reference_xyz_file = "xyz/chd_reference.xyz"
 ###################################
 
-w.chd_strategy1(
+w.chd_2D(
     run_id,
     start_xyz_file,
     reference_xyz_file,
     target_xyz_file,
     qvector=np.linspace(1e-9, 8.0, 81, endpoint=True),
-    ic_ninitials=1000,
-    ic_nsteps=400,
-    ic_step_size = 0.1,
-    ic_starting_temp = 0.2,
-    ic_harmonic_factor = 0.1,  # a stronger HO factor for IC generation
     sa_nsteps = 2000,
-    sa_step_size = 0.02,
-    sa_starting_temp = 0.5,
-    sa_harmonic_factor = 0.00,
+    sa_step_size = 0.01,
+    sa_starting_temp = 0.2,
+    sa_harmonic_factor = 0.01,
     sa_n_trials = 1,  # repeats n_trails times, only saves lowest f
     sa_n_restarts = 1,  # entire thing repeats n_restarts times
-    save_ic_xyzs = True, # save all ic_.xyz files in tmp_/
 )
 
 print("Total time: %3.2f s" % float(default_timer() - start))

@@ -146,8 +146,8 @@ class Xray:
         """
         natom = len(atomic_numbers)
         qlen = len(qvector)
-        theta = np.linspace(0, 1 * np.pi, qlen, endpoint=True)
-        phi = np.linspace(0, 2 * np.pi, qlen, endpoint=True)
+        theta = np.linspace(1e-6, 1 * np.pi, qlen, endpoint=True)
+        phi = np.linspace(1e-6, 2 * np.pi, qlen, endpoint=True)
         # this part... no.
         # qx etc. must be a 2D grid...
         # hmmmm, this works but there might be a better way.
@@ -164,57 +164,30 @@ class Xray:
                 qx[i, j] = -k0 * np.sin(theta[i]) * np.cos(phi[j])
                 qy[i, j] = -k0 * np.sin(theta[i]) * np.sin(phi[j])
                 qz[i, j] = k0 * (np.cos(theta[i]) - 1)
-        # are these correct?
-        # I don't know. Qz probably is...
-        print("qx")
-        print(qx)
-        print("qy")
-        print(qy[:, 1])
-        print("qz")
-        print(qz[:, 0])
-        # qz goes from [0, -k0]
-        # hmmm
         atomic = np.zeros((qlen, qlen))  # total atomic factor
         molecular = np.zeros((qlen, qlen))  # total molecular factor
         atomic_factor_array = np.zeros((natom, qlen, qlen))  # array of atomic factors
+        # atomic
         for i in range(natom):
-            # hmmm
-            for j in range(qlen):  # now it works. Probably
+            for j in range(qlen):
                 atomic_factor_array[i, :, j] = self.atomic_factor(
                     atomic_numbers[i], qvector
                 )
             atomic += np.power(atomic_factor_array[i, :, :], 2)
-        print("atomic factor stuff:")
-        print(atomic_factor_array)
-        print(atomic_factor_array[0, 0, 0])  # should be 8 - it is
-        print(atomic_factor_array[1, 0, 0])  # should be 1 - it is
-        print(atomic)
-        print(atomic[0, 0])
-        # maybe it's right.. it is 8**2 + 1**2 + 1**2 = 66
-        # is that how it's supposed to be?
-        # Yes, it is correct.
-        # THEREFORE, the molecular part is wrong
+        # molecular
         for i in range(natom):
             for j in range(i + 1, natom):  # j > i
-                # verify by checking rotational average: int_phi = iam_calc
                 fij = np.multiply(
                     atomic_factor_array[i, :, :], atomic_factor_array[j, :, :]
                 )
                 xij = xyz[i, 0] - xyz[j, 0]
                 yij = xyz[i, 1] - xyz[j, 1]
                 zij = xyz[i, 2] - xyz[j, 2]
-                # maybe...?
-                # it gets it correct at q=0 (at least)
                 molecular += fij * np.cos(qx * xij + qy * yij + qz * zij)
         molecular *= 2
-        print("molecular")
-        print(molecular)
-        print(molecular[0, 0])  # I believe is supposed to be = 34/2
-        iam_total = atomic + 2 * molecular
+        iam_total = atomic + molecular
         rotavg = np.sum(iam_total, axis=1) / qlen  # phi average.. I think is correct
-        print(iam_total[0, 0])
-        print(rotavg[0])
-        return atomic, molecular, rotavg
+        return iam_total, atomic, molecular, atomic_factor_array, rotavg, qx, qy, qz
 
 
     ### other functions ... that may be called by the Gradient descent.

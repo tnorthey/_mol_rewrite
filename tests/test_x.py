@@ -80,3 +80,11 @@ def test_iam_calc():
     # test if H2O I(q=0) = 0 (within rounding)
     assert round(iam[0], 0) == 0.0, "H2O I_total(q = 0) != 0"
 
+def test_iam_calc_2d():
+    '''x-ray scattering mode'''
+    # 2D signal
+    iam_total, atomic, molecular, atomic_factor_array, rotavg, qx, qy, qz = x.iam_calc_2d(atomic_numbers, xyz, qvector)
+    # test if H2O I(q=0) = Nel**2 = 10**2  (within rounding)
+    assert round(iam_total[0, 0], 0) == 100.0, "H2O I_total(q = 0) != 100"
+    # assert that iam_total is all positive values
+    assert np.sum(np.abs(iam_total) - iam_total) == 0, "I(q) is not all postive values!"
